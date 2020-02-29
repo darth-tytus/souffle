@@ -165,6 +165,9 @@
 /* -- Non-Terminal Types -- */
 %type <AstAtom *>                           atom
 %type <AstArgument *>                       arg
+%type <AstArgument *>                       intrinsic_functor
+%type <AstArgument *>                       user_defined_functor
+%type <AstAggregator *>                     aggregator
 %type <RuleBody *>                          body
 %type <AstComponentType *>                  comp_type
 %type <AstComponentInit *>                  comp_init
@@ -208,6 +211,9 @@
 /* -- Destructors -- */
 %destructor { delete $$; }                                  atom
 %destructor { delete $$; }                                  arg
+%destructor { delete $$; }                                  intrinsic_functor
+%destructor { delete $$; }                                  user_defined_functor
+%destructor { delete $$; }                                  aggregator
 %destructor { delete $$; }                                  body
 %destructor { delete $$; }                                  comp_type
 %destructor { delete $$; }                                  comp_init
@@ -950,8 +956,60 @@ arg
         $non_empty_arg_list.clear();
     }
 
-    /* user-defined functor */
-  | AT IDENT LPAREN RPAREN {
+  | intrinsic_functor {
+        $$ = $1; $intrinsic_functor = nullptr;
+    }
+  | user_defined_functor {
+        $$ = $1; $user_defined_functor = nullptr;
+    }
+  | aggregator {
+        $$ = $1; $aggregator = nullptr;
+    }
+  ;
+
+/**
+ * Components
+ */
+
+/* Component */
+component
+  : component_head LBRACE component_body RBRACE {
+        $$ = $component_body;
+        auto* type = $component_head->getComponentType()->clone();
+        $$->setComponentType(std::unique_ptr<AstComponentType>(type));
+        $$->copyBaseComponents($component_head);
+        $$->setSrcLoc(@$);
+
+        $component_body = nullptr;
+    }
+  ;
+
+/* Component head */
+component_head
+  : COMPONENT comp_type {
+        $$ = new AstComponent();
+        $$->setComponentType(std::unique_ptr<AstComponentType>($comp_type));
+
+        $comp_type = nullptr;
+    }
+  | component_head[comp] COLON comp_type {
+        $$ = $comp;
+        $$->addBaseComponent(std::unique_ptr<AstComponentType>($comp_type));
+
+        $comp = nullptr;
+        $comp_type = nullptr;
+    }
+  | component_head[comp] COMMA comp_type {
+        $$ = $comp;
+        $$->addBaseComponent(std::unique_ptr<AstComponentType>($comp_type));
+
+        $comp = nullptr;
+        $comp_type = nullptr;
+    }
+  ;
+
+user_defined_functor
+  : AT IDENT LPAREN RPAREN {
         auto functor = new AstUserDefinedFunctor($IDENT);
         $$ = functor;
         $$->setSrcLoc(@$);
@@ -968,10 +1026,10 @@ arg
 
         $non_empty_arg_list.clear();
     }
+  ;
 
-    /* -- intrinsic functor -- */
-    /* unary functors */
-  | MINUS arg[nested_arg] %prec NEG {
+intrinsic_functor
+  : MINUS arg[nested_arg] %prec NEG {
         if (const AstNumberConstant* original = dynamic_cast<const AstNumberConstant*>($nested_arg)) {
             $$ = new AstNumberConstant(-1 * original->getValue());
             $$->setSrcLoc(@nested_arg);
@@ -1252,9 +1310,10 @@ arg
         $second = nullptr;
         $third = nullptr;
     }
+  ;
 
-    /* -- aggregators -- */
-  | COUNT COLON atom {
+aggregator
+  : COUNT COLON atom {
         auto aggr = new AstAggregator(AstAggregator::count);
 
         aggr->addBodyLiteral(std::unique_ptr<AstLiteral>($atom));
@@ -1384,47 +1443,6 @@ arg
         $$->setSrcLoc(@$);
 
         $target_expr = nullptr;
-    }
-  ;
-
-/**
- * Components
- */
-
-/* Component */
-component
-  : component_head LBRACE component_body RBRACE {
-        $$ = $component_body;
-        auto* type = $component_head->getComponentType()->clone();
-        $$->setComponentType(std::unique_ptr<AstComponentType>(type));
-        $$->copyBaseComponents($component_head);
-        $$->setSrcLoc(@$);
-
-        $component_body = nullptr;
-    }
-  ;
-
-/* Component head */
-component_head
-  : COMPONENT comp_type {
-        $$ = new AstComponent();
-        $$->setComponentType(std::unique_ptr<AstComponentType>($comp_type));
-
-        $comp_type = nullptr;
-    }
-  | component_head[comp] COLON comp_type {
-        $$ = $comp;
-        $$->addBaseComponent(std::unique_ptr<AstComponentType>($comp_type));
-
-        $comp = nullptr;
-        $comp_type = nullptr;
-    }
-  | component_head[comp] COMMA comp_type {
-        $$ = $comp;
-        $$->addBaseComponent(std::unique_ptr<AstComponentType>($comp_type));
-
-        $comp = nullptr;
-        $comp_type = nullptr;
     }
   ;
 
