@@ -165,8 +165,8 @@
 /* -- Non-Terminal Types -- */
 %type <AstAtom *>                           atom
 %type <AstArgument *>                       arg
-%type <AstArgument *>                       intrinsic_functor
-%type <AstArgument *>                       user_defined_functor
+%type <AstIntrinsicFunctor *>               intrinsic_functor
+%type <AstUserDefinedFunctor *>             user_defined_functor
 %type <AstConstant *>                       numeric_constant
 %type <AstAggregator *>                     aggregator
 %type <RuleBody *>                          body
@@ -900,6 +900,18 @@ arg
         $$ = new AstStringConstant($STRING);
         $$->setSrcLoc(@$);
     }
+  // Unary minus is a special case.
+  | MINUS arg[nested_arg] %prec NEG {
+        if (const AstNumberConstant* original = dynamic_cast<const AstNumberConstant*>($nested_arg)) {
+            $$ = new AstNumberConstant(-1 * original->getValue());
+            $$->setSrcLoc(@nested_arg);
+        } else {
+            $$ = new AstIntrinsicFunctor(FunctorOp::NEG,
+                std::unique_ptr<AstArgument>($nested_arg));
+            $nested_arg = nullptr;
+            $$->setSrcLoc(@$);
+        }
+    }
   | numeric_constant {
         $$ = $numeric_constant;
         $$->setSrcLoc(@$);
@@ -957,15 +969,19 @@ arg
     }
 
   | intrinsic_functor {
-        $$ = $1; $intrinsic_functor = nullptr;
+        $$ = $1;
+        $intrinsic_functor = nullptr;
     }
   | user_defined_functor {
-        $$ = $1; $user_defined_functor = nullptr;
+        $$ = $1;
+        $user_defined_functor = nullptr;
     }
   | aggregator {
-        $$ = $1; $aggregator = nullptr;
+        $$ = $1;
+        $aggregator = nullptr;
     }
   ;
+
 
 /**
  * Components
@@ -1038,19 +1054,7 @@ user_defined_functor
   ;
 
 intrinsic_functor
-  : MINUS arg[nested_arg] %prec NEG {
-        if (const AstNumberConstant* original = dynamic_cast<const AstNumberConstant*>($nested_arg)) {
-            $$ = new AstNumberConstant(-1 * original->getValue());
-            $$->setSrcLoc(@nested_arg);
-        } else {
-            $$ = new AstIntrinsicFunctor(FunctorOp::NEG,
-                std::unique_ptr<AstArgument>($nested_arg));
-            $nested_arg = nullptr;
-            $$->setSrcLoc(@$);
-        }
-
-    }
-  | BW_NOT arg[nested_arg] {
+  : BW_NOT arg[nested_arg] {
         $$ = new AstIntrinsicFunctor(FunctorOp::BNOT,
                 std::unique_ptr<AstArgument>($nested_arg));
         $$->setSrcLoc(@$);
