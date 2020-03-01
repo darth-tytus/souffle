@@ -167,6 +167,7 @@
 %type <AstArgument *>                       arg
 %type <AstArgument *>                       intrinsic_functor
 %type <AstArgument *>                       user_defined_functor
+%type <AstConstant *>                       numeric_constant
 %type <AstAggregator *>                     aggregator
 %type <RuleBody *>                          body
 %type <AstComponentType *>                  comp_type
@@ -213,6 +214,7 @@
 %destructor { delete $$; }                                  arg
 %destructor { delete $$; }                                  intrinsic_functor
 %destructor { delete $$; }                                  user_defined_functor
+%destructor { delete $$; }                                  numeric_constant
 %destructor { delete $$; }                                  aggregator
 %destructor { delete $$; }                                  body
 %destructor { delete $$; }                                  comp_type
@@ -898,14 +900,12 @@ arg
         $$ = new AstStringConstant($STRING);
         $$->setSrcLoc(@$);
     }
-  | FLOAT {
-        $$ = new AstFloatConstant($FLOAT);
+  | numeric_constant {
+        $$ = $numeric_constant;
         $$->setSrcLoc(@$);
-    }
-  | NUMBER {
-        $$ = new AstNumberConstant($NUMBER);
-        $$->setSrcLoc(@$);
-    }
+
+        $numeric_constant = nullptr;
+  }
   | UNDERSCORE {
         $$ = new AstUnnamedVariable();
         $$->setSrcLoc(@$);
@@ -1005,6 +1005,15 @@ component_head
 
         $comp = nullptr;
         $comp_type = nullptr;
+    }
+  ;
+
+numeric_constant
+  : FLOAT {
+        $$ = new AstFloatConstant($FLOAT);
+    }
+  | NUMBER {
+        $$ = new AstNumberConstant($NUMBER);
     }
   ;
 
