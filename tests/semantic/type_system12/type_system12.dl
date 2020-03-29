@@ -1,0 +1,25 @@
+// Souffle - A Datalog Compiler
+// Copyright (c) 2020, The Souffle Developers. All rights reserved
+// Licensed under the Universal Permissive License v 1.0 as shown at:
+// - https://opensource.org/licenses/UPL
+// - <souffle root>/licenses/SOUFFLE-UPL.txt
+
+//
+// Type System 12
+//
+// Issue #832
+//
+
+
+.type X = number | symbol
+.type Y = number
+
+.decl A(x : X)
+A(1).
+
+.decl B(x : Y)
+B(x) :- A(x).
+
+.output B(IO = stdout)
+
+

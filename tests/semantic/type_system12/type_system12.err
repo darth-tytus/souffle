@@ -1,0 +1,7 @@
+Error: Union type X is defined over {symbol, number} (multiple primitive types in union) in file type_system12.dl at line 14
+.type X = number | symbol
+^-------------------------
+Error: Ambiguous constant (unable to deduce type) in file type_system12.dl at line 18
+A(1).
+--^---
+2 errors generated, evaluation aborted
