@@ -44,7 +44,7 @@ class AstNode;
 
 namespace {
 
-static const unsigned int MAX_INSTANTIATION_DEPTH = 1000;
+static constexpr size_t MAX_INSTANTIATION_DEPTH = 1000;
 
 /**
  * A container type for the (instantiated) content of a component.

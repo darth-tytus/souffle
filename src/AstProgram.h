@@ -60,6 +60,14 @@ public:
         return toPtrVector(clauses);
     }
 
+    std::vector<AstMultiClause*> getMultiClauses() const {
+        return toPtrVector(multiClauses);
+    }
+
+    void setMultiClauses(VecOwn<AstMultiClause> newMultiClauses) {
+        multiClauses = std::move(newMultiClauses);
+    }
+
     /** get functor declarations */
     std::vector<AstFunctorDeclaration*> getFunctorDeclarations() const {
         return toPtrVector(functors);
@@ -101,8 +109,12 @@ public:
     /** add a clause */
     void addClause(Own<AstSimpleClause> clause) {
         assert(clause != nullptr && "Undefined clause");
-        // assert(clause->getHead() != nullptr && "Undefined head of the clause");
+        assert(clause->getHead() != nullptr && "Undefined head of the clause");
         clauses.push_back(std::move(clause));
+    }
+
+    void addMultiClause(Own<AstMultiClause> clause) {
+        multiClauses.push_back(std::move(clause));
     }
 
     /** remove a clause */
@@ -135,6 +147,7 @@ public:
         res->functors = souffle::clone(functors);
         res->relations = souffle::clone(relations);
         res->clauses = souffle::clone(clauses);
+        res->multiClauses = souffle::clone(multiClauses);
         res->ios = souffle::clone(ios);
         return res;
     }
@@ -159,6 +172,9 @@ public:
             cur = map(std::move(cur));
         }
         for (auto& cur : clauses) {
+            cur = map(std::move(cur));
+        }
+        for (auto& cur : multiClauses) {
             cur = map(std::move(cur));
         }
         for (auto& cur : ios) {
@@ -189,6 +205,9 @@ public:
         for (const auto& cur : clauses) {
             res.push_back(cur.get());
         }
+        for (const auto& cur : multiClauses) {
+            res.push_back(cur.get());
+        }
         for (const auto& cur : ios) {
             res.push_back(cur.get());
         }
@@ -208,6 +227,7 @@ protected:
         show(functors);
         show(relations);
         show(clauses, "\n\n");
+        show(multiClauses, "\n\n");
         show(ios, "\n\n");
     }
 
@@ -232,6 +252,9 @@ protected:
             return false;
         }
         if (!equal_targets(clauses, other.clauses)) {
+            return false;
+        }
+        if (!equal_targets(multiClauses, other.multiClauses)) {
             return false;
         }
         if (!equal_targets(ios, other.ios)) {
@@ -289,6 +312,7 @@ protected:
 
     /** Program clauses */
     VecOwn<AstSimpleClause> clauses;
+    VecOwn<AstMultiClause> multiClauses;
 
     /** IO statements */
     VecOwn<AstIO> ios;

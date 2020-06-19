@@ -713,4 +713,14 @@ private:
     bool replaceUnnamedVariable(AstSimpleClause&);
 };
 
+class FoldMultiClauses : public AstTransformer {
+public:
+    std::string getName() const override {
+        return "FoldMultiClauses";
+    }
+
+private:
+    bool transform(AstTranslationUnit& translationUnit) override;
+};
+
 }  // end of namespace souffle

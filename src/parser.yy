@@ -292,7 +292,7 @@
 %type <Mov<Own<AstExecutionOrder>>>         exec_order
 %type <Mov<Own<AstExecutionPlan>>>          exec_plan
 %type <Mov<Own<AstExecutionPlan>>>          exec_plan_list
-%type <Mov<Own<AstSimpleClause>>>                 fact
+%type <Mov<Own<AstSimpleClause>>>           fact
 %type <Mov<std::vector<TypeAttribute>>>     functor_arg_type_list
 %type <Mov<std::string>>                    functor_built_in
 %type <Mov<Own<AstFunctorDeclaration>>>     functor_decl
@@ -315,8 +315,8 @@
 %type <Mov<VecOwn<AstAttribute>>>           record_type_list
 %type <Mov<VecOwn<AstRelation>>>            relation_decl
 %type <std::set<RelationTag>>               relation_tags
-%type <Mov<VecOwn<AstSimpleClause>>>              rule
-%type <Mov<VecOwn<AstSimpleClause>>>              rule_def
+%type <Mov<VecOwn<AstMultiClause>>>         rule
+%type <Mov<VecOwn<AstMultiClause>>>         rule_def
 %type <Mov<RuleBody>>                       term
 %type <Mov<Own<AstType>>>                   type
 %type <Mov<std::vector<AstQualifiedName>>>  type_params
@@ -350,7 +350,7 @@ program
 unit
   : %empty              { }
   | unit io_head        { for (auto&& cur : $io_head) driver.addIO(std::move(cur)); }
-  | unit rule           { for (auto&& cur : $rule   ) driver.addClause(std::move(cur)); }
+  | unit rule           { for (auto&& cur : $rule   ) driver.addMultiClause(std::move(cur)); }
   | unit fact           { driver.addClause            ($fact); }
   | unit component      { driver.addComponent         ($component); }
   | unit comp_init      { driver.addInstantiation     ($comp_init); }
@@ -368,7 +368,6 @@ unit
 /**
  * Identifiers
  */
-
 identifier
   :                 IDENT { $$ = $IDENT; }
     /* TODO (azreika): in next version: DOT -> DOUBLECOLON */
@@ -492,10 +491,14 @@ rule_def
 
         for (auto&& head : $heads) {
             for (auto&& body : bodies) {
-                auto cur = clone(body);
-                cur->setHead(clone(head));
-                cur->setSrcLoc(@$);
-                $$.push_back(std::move(cur));
+                VecOwn<AstLiteral> bodyLits;
+                VecOwn<AstAtom> heads;
+                for (auto* lit : body->getBodyLiterals()) {
+                    bodyLits.push_back(Own<AstLiteral>(clone(lit)));
+                }
+                heads.push_back(clone(head));
+                auto newClause = new AstMultiClause(std::move(heads), std::move(bodyLits), {}, @$);
+                $$.push_back(Own<AstMultiClause>(newClause));
             }
         }
     }
@@ -754,7 +757,7 @@ type_param_list
 component_body
   : %empty                        { $$ = mk<AstComponent>(); }
   | component_body io_head        { $$ = $1; for (auto&& x : $2) $$->addIO    (std::move(x)); }
-  | component_body rule           { $$ = $1; for (auto&& x : $2) $$->addClause(std::move(x)); }
+  | component_body rule           { $$ = $1; for (auto&& x : $2) $$->addMultiClause(std::move(x)); }
   | component_body fact           { $$ = $1; $$->addClause       ($2); }
   | component_body OVERRIDE IDENT { $$ = $1; $$->addOverride     ($3); }
   | component_body comp_init      { $$ = $1; $$->addInstantiation($2); }

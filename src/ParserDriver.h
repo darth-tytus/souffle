@@ -62,6 +62,7 @@ public:
     void addIO(std::unique_ptr<AstIO> d);
     void addType(std::unique_ptr<AstType> type);
     void addClause(std::unique_ptr<AstSimpleClause> c);
+    void addMultiClause(std::unique_ptr<AstMultiClause> c);
     void addComponent(std::unique_ptr<AstComponent> c);
     void addInstantiation(std::unique_ptr<AstComponentInit> ci);
     void addPragma(std::unique_ptr<AstPragma> p);

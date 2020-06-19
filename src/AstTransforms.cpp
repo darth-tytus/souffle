@@ -1813,4 +1813,42 @@ bool ResolveAnonymousRecordsAliases::transform(AstTranslationUnit& translationUn
     return changed;
 }
 
+bool FoldMultiClauses::transform(AstTranslationUnit& translationUnit) {
+    bool changed = false;
+
+    auto& program = *translationUnit.getProgram();
+
+    auto multiToSimple = [&](AstMultiClause& multi) {
+        VecOwn<AstSimpleClause> simpleClauses;
+
+        auto heads = multi.getHeads();
+        auto body = multi.getBody();
+        auto executionPlan = multi.getExecutionPlan();
+        auto loc = multi.getSrcLoc();
+
+        for (AstAtom* head : heads) {
+            VecOwn<AstLiteral> newBody;
+            for (auto* lit : body) {
+                newBody.push_back(souffle::clone(lit));
+            }
+            auto* newSimpleClause = new AstSimpleClause(
+                    souffle::clone(head), std::move(newBody), souffle::clone(executionPlan), loc);
+            simpleClauses.push_back(Own<AstSimpleClause>(newSimpleClause));
+        }
+        return simpleClauses;
+    };
+
+    for (auto* multiClause : program.getMultiClauses()) {
+        for (auto& simpleClause : multiToSimple(*multiClause)) {
+            program.addClause(std::move(simpleClause));
+        }
+        changed = true;
+    }
+
+    // Clear multiClauses.
+    program.setMultiClauses({});
+
+    return changed;
+}
+
 }  // end of namespace souffle

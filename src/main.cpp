@@ -417,8 +417,8 @@ int main(int argc, char** argv) {
             mk<PipelineTransformer>(mk<ProvenanceTransformer>(), mk<PolymorphicObjectsTransformer>()));
 
     // Main pipeline
-    auto pipeline = std::make_unique<PipelineTransformer>(std::make_unique<AstComponentChecker>(),
-            std::make_unique<ComponentInstantiationTransformer>(),
+    auto pipeline = std::make_unique<PipelineTransformer>(std::make_unique<FoldMultiClauses>(),
+            std::make_unique<AstComponentChecker>(), std::make_unique<ComponentInstantiationTransformer>(),
             std::make_unique<UniqueAggregationVariablesTransformer>(),
             std::make_unique<AstUserDefinedFunctorsTransformer>(),
             std::make_unique<FixpointTransformer>(

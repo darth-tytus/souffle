@@ -130,9 +130,89 @@ private:
     std::map<int, Own<AstExecutionOrder>> plans;
 };
 
-class AstClause : public AstNode {
+class AstMultiClause : public AstNode {
+public:
+    AstMultiClause(VecOwn<AstAtom> heads, VecOwn<AstLiteral> body, Own<AstExecutionPlan> plan = {},
+            SrcLocation loc = {})
+            : AstNode(std::move(loc)), heads(std::move(heads)), body(std::move(body)), plan(std::move(plan)) {
+        assert(this->heads.size() != 0);
+        assert(this->body.size() != 0);
+    };
+
+    /** Set the heads of clause to @p h */
+    void setHeads(VecOwn<AstAtom> newHeads) {
+        heads = std::move(newHeads);
+    }
+
+    /** Set the body of clause to @p body */
+    void setBody(VecOwn<AstLiteral> newBody) {
+        body = std::move(newBody);
+    }
+
+    /** Updates the execution plan associated to this clause */
+    void setExecutionPlan(Own<AstExecutionPlan> plan) {
+        this->plan = std::move(plan);
+    }
+
+    std::vector<AstLiteral*> getBody() const {
+        return toPtrVector(body);
+    }
+
+    std::vector<AstAtom*> getHeads() const {
+        return toPtrVector(heads);
+    }
+
+    /** Obtains the execution plan associated to this clause or null if there is none */
+    const AstExecutionPlan* getExecutionPlan() const {
+        return plan.get();
+    }
+
+    void apply(const AstNodeMapper& map) override {
+        for (auto& head : heads) {
+            head = map(std::move(head));
+        }
+        for (auto& lit : body) {
+            lit = map(std::move(lit));
+        }
+    }
+
+    AstMultiClause* clone() const override {
+        return new AstMultiClause(
+                souffle::clone(heads), souffle::clone(body), souffle::clone(plan), getSrcLoc());
+    }
+
+    std::vector<const AstNode*> getChildNodes() const override {
+        std::vector<const AstNode*> children;
+
+        for (auto& head : heads) {
+            children.push_back(head.get());
+        }
+
+        for (auto& lit : body) {
+            children.push_back(lit.get());
+        }
+
+        return children;
+    }
+
 protected:
-    AstClause(SrcLocation loc) : AstNode(std::move(loc)){};
+    VecOwn<AstAtom> heads;
+    VecOwn<AstLiteral> body;
+    Own<AstExecutionPlan> plan;
+
+    void print(std::ostream& os) const override {
+        os << tfm::format("%s :- \n   %s.\n", join(heads, ", "), join(body, ",\n   "));
+
+        if (plan != nullptr) {
+            os << *plan;
+        }
+    }
+
+    bool equal(const AstNode& node) const override {
+        const auto& other = static_cast<const AstMultiClause&>(node);
+        return equal_targets(heads, other.heads) && equal_targets(body, other.body) &&
+               equal_ptr(plan, other.plan);
+    }
 };
 
 /**
@@ -144,11 +224,11 @@ protected:
  *
  * TODO (azreika): make clause abstract and split into two subclasses: Rule and Fact
  */
-class AstSimpleClause : public AstClause {
+class AstSimpleClause : public AstNode {
 public:
     AstSimpleClause(Own<AstAtom> head = {}, VecOwn<AstLiteral> bodyLiterals = {},
             Own<AstExecutionPlan> plan = {}, SrcLocation loc = {})
-            : AstClause(std::move(loc)), head(std::move(head)), bodyLiterals(std::move(bodyLiterals)),
+            : AstNode(std::move(loc)), head(std::move(head)), bodyLiterals(std::move(bodyLiterals)),
               plan(std::move(plan)) {}
 
     /** Add a Literal to the body of the clause */

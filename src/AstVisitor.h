@@ -111,6 +111,7 @@ struct AstVisitor : public ast_visitor_tag {
         // rest
         FORWARD(Attribute);
         FORWARD(SimpleClause);
+        FORWARD(MultiClause);
         FORWARD(Relation);
         FORWARD(Program);
         FORWARD(Pragma);
@@ -168,8 +169,6 @@ protected:
     LINK(BinaryConstraint, Constraint);
     LINK(Constraint, Literal);
 
-    LINK(SimpleClause, Clause);
-
     // components
     LINK(ComponentType, Node);
     LINK(ComponentInit, Node);
@@ -178,7 +177,8 @@ protected:
     // -- others --
     LINK(Program, Node);
     LINK(Attribute, Node);
-    LINK(Clause, Node);
+    LINK(SimpleClause, Node);
+    LINK(MultiClause, Node);
     LINK(Relation, Node);
     LINK(Pragma, Node);
 

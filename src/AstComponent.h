@@ -201,9 +201,12 @@ public:
         return toPtrVector(relations);
     }
 
-    /** add clause */
     void addClause(Own<AstSimpleClause> c) {
         clauses.push_back(std::move(c));
+    }
+
+    void addMultiClause(Own<AstMultiClause> c) {
+        multiClauses.push_back(std::move(c));
     }
 
     /** get clauses */
@@ -385,6 +388,9 @@ protected:
 
     /** clauses */
     VecOwn<AstSimpleClause> clauses;
+
+    /** clauses */
+    VecOwn<AstMultiClause> multiClauses;
 
     /** I/O directives */
     VecOwn<AstIO> ios;
