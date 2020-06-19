@@ -110,7 +110,7 @@ struct AstVisitor : public ast_visitor_tag {
 
         // rest
         FORWARD(Attribute);
-        FORWARD(Clause);
+        FORWARD(SimpleClause);
         FORWARD(Relation);
         FORWARD(Program);
         FORWARD(Pragma);
@@ -161,12 +161,14 @@ protected:
     // literals
     LINK(Atom, Literal)
     LINK(ProvenanceNegation, Negation)
-    LINK(Negation, Literal)
+    LINK(Negation, Literal);
     LINK(Literal, Node);
 
-    LINK(BooleanConstraint, Constraint)
-    LINK(BinaryConstraint, Constraint)
-    LINK(Constraint, Literal)
+    LINK(BooleanConstraint, Constraint);
+    LINK(BinaryConstraint, Constraint);
+    LINK(Constraint, Literal);
+
+    LINK(SimpleClause, Clause);
 
     // components
     LINK(ComponentType, Node);

@@ -72,18 +72,18 @@ public:
 
 class AdornedClause {
 private:
-    AstClause* clause;
+    AstSimpleClause* clause;
     std::string headAdornment;
     std::vector<std::string> bodyAdornment;
     std::vector<unsigned int> ordering;
 
 public:
-    AdornedClause(AstClause* clause, std::string headAdornment, std::vector<std::string> bodyAdornment,
+    AdornedClause(AstSimpleClause* clause, std::string headAdornment, std::vector<std::string> bodyAdornment,
             std::vector<unsigned int> ordering)
             : clause(clause), headAdornment(std::move(headAdornment)),
               bodyAdornment(std::move(bodyAdornment)), ordering(std::move(ordering)) {}
 
-    AstClause* getClause() const {
+    AstSimpleClause* getClause() const {
         return clause;
     }
 

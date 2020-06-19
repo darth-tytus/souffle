@@ -202,12 +202,12 @@ public:
     }
 
     /** add clause */
-    void addClause(Own<AstClause> c) {
+    void addClause(Own<AstSimpleClause> c) {
         clauses.push_back(std::move(c));
     }
 
     /** get clauses */
-    std::vector<AstClause*> getClauses() const {
+    std::vector<AstSimpleClause*> getClauses() const {
         return toPtrVector(clauses);
     }
 
@@ -384,7 +384,7 @@ protected:
     VecOwn<AstRelation> relations;
 
     /** clauses */
-    VecOwn<AstClause> clauses;
+    VecOwn<AstSimpleClause> clauses;
 
     /** I/O directives */
     VecOwn<AstIO> ios;

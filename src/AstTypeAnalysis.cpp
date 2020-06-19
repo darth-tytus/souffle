@@ -468,8 +468,8 @@ TypeConstraint isSubtypeOfComponent(
 }  // namespace
 
 /* Return a new clause with type-annotated variables */
-AstClause* createAnnotatedClause(
-        const AstClause* clause, const std::map<const AstArgument*, TypeSet> argumentTypes) {
+AstSimpleClause* createAnnotatedClause(
+        const AstSimpleClause* clause, const std::map<const AstArgument*, TypeSet> argumentTypes) {
     // Annotates each variable with its type based on a given type analysis result
     struct TypeAnnotator : public AstNodeMapper {
         const std::map<const AstArgument*, TypeSet>& types;
@@ -501,7 +501,7 @@ AstClause* createAnnotatedClause(
      *  (2) Keep track of the addresses of equivalent arguments in the cloned clause
      * Method (2) was chosen to avoid having to recompute the analysis each time.
      */
-    AstClause* annotatedClause = clause->clone();
+    AstSimpleClause* annotatedClause = clause->clone();
 
     // Maps x -> y, where x is the address of an argument in the original clause, and y
     // is the address of the equivalent argument in the clone.
@@ -552,7 +552,7 @@ private:
     // Sinks = {head} ∪ {negated atoms}
     std::set<const AstAtom*> sinks;
 
-    void collectConstraints(const AstClause& clause) override {
+    void collectConstraints(const AstSimpleClause& clause) override {
         sinks.insert(clause.getHead());
         visitDepthFirstPreOrder(clause, *this);
     }
@@ -749,7 +749,7 @@ private:
 };
 
 std::map<const AstArgument*, TypeSet> TypeAnalysis::analyseTypes(const TypeEnvironment& typeEnv,
-        const AstClause& clause, const AstProgram& program, std::ostream* logs) {
+        const AstSimpleClause& clause, const AstProgram& program, std::ostream* logs) {
     return TypeConstraintsAnalysis(typeEnv, program).analyse(clause, logs);
 }
 
@@ -772,13 +772,13 @@ void TypeAnalysis::run(const AstTranslationUnit& translationUnit) {
     auto& typeEnv = translationUnit.getAnalysis<TypeEnvironmentAnalysis>()->getTypeEnvironment();
 
     // Analyse types, clause by clause.
-    for (const AstClause* clause : program.getClauses()) {
+    for (const AstSimpleClause* clause : program.getClauses()) {
         auto clauseArgumentTypes = analyseTypes(typeEnv, *clause, program, debugStream);
         argumentTypes.insert(clauseArgumentTypes.begin(), clauseArgumentTypes.end());
 
         if (debugStream != nullptr) {
             // Store an annotated clause for printing purposes
-            AstClause* annotatedClause = createAnnotatedClause(clause, clauseArgumentTypes);
+            AstSimpleClause* annotatedClause = createAnnotatedClause(clause, clauseArgumentTypes);
             annotatedClauses.emplace_back(annotatedClause);
         }
     }

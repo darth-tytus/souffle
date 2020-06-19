@@ -162,7 +162,7 @@ bool isBindingConstraint(AstArgument* lhs, AstArgument* rhs, std::set<std::strin
 }
 
 // checks whether the clause involves aggregators
-bool containsAggregators(AstClause* clause) {
+bool containsAggregators(AstSimpleClause* clause) {
     bool found = false;
 
     // check for aggregators
@@ -277,7 +277,7 @@ AstQualifiedName createSubIdentifier(const AstQualifiedName& relationName, size_
 /* functions to find atoms to ignore */
 
 // add all atoms within a clause that contain aggregators to the ignored relations list
-std::set<AstQualifiedName> addAggregators(AstClause* clause, std::set<AstQualifiedName> ignoredNames) {
+std::set<AstQualifiedName> addAggregators(AstSimpleClause* clause, std::set<AstQualifiedName> ignoredNames) {
     std::set<AstQualifiedName> retVal = std::move(ignoredNames);
 
     visitDepthFirst(*clause, [&](const AstAggregator& aggregator) {
@@ -301,7 +301,7 @@ std::set<AstQualifiedName> addBackwardDependencies(
 
     // Add in all relations that need to use an ignored relation
     for (AstRelation* rel : program->getRelations()) {
-        for (AstClause* clause : getClauses(*program, *rel)) {
+        for (AstSimpleClause* clause : getClauses(*program, *rel)) {
             AstQualifiedName clauseHeadName = clause->getHead()->getQualifiedName();
             if (!contains(relations, clauseHeadName)) {
                 // Clause hasn't been added yet, so check if it needs to be added
@@ -340,7 +340,7 @@ std::set<AstQualifiedName> addForwardDependencies(
 
         // Add in all the relations that it needs to use
         AstRelation* associatedRelation = getRelation(*program, relName);
-        for (AstClause* clause : getClauses(*program, *associatedRelation)) {
+        for (AstSimpleClause* clause : getClauses(*program, *associatedRelation)) {
             visitDepthFirst(*clause, [&](const AstAtom& subatom) {
                 AstQualifiedName atomName = subatom.getQualifiedName();
                 result.insert(atomName);
@@ -652,7 +652,7 @@ BindingStore bindComposites(const AstProgram* program) {
 
     // apply the change to all clauses in the program
     for (AstRelation* rel : program->getRelations()) {
-        for (AstClause* clause : getClauses(*program, *rel)) {
+        for (AstSimpleClause* clause : getClauses(*program, *rel)) {
             std::set<AstBinaryConstraint*> constraints;
             M update(compositeBindings, constraints, changeCount);
             clause->apply(update);
@@ -714,7 +714,7 @@ void Adornment::run(const AstTranslationUnit& translationUnit) {
 
         // check whether edb or idb
         bool is_edb = true;
-        for (AstClause* clause : getClauses(*program, *rel)) {
+        for (AstSimpleClause* clause : getClauses(*program, *rel)) {
             if (!isFact(*clause)) {
                 is_edb = false;
                 break;
@@ -738,7 +738,7 @@ void Adornment::run(const AstTranslationUnit& translationUnit) {
 
     // find atoms that should be ignored
     for (AstRelation* rel : program->getRelations()) {
-        for (AstClause* clause : getClauses(*program, *rel)) {
+        for (AstSimpleClause* clause : getClauses(*program, *rel)) {
             // ignore atoms that have rules containing aggregators
             if (containsAggregators(clause)) {
                 ignoredAtoms.insert(clause->getHead()->getQualifiedName());
@@ -785,7 +785,7 @@ void Adornment::run(const AstTranslationUnit& translationUnit) {
 
             // go through and adorn all IDB clauses defining the relation
             AstRelation* rel = getRelation(*program, currPredicate.getQualifiedName());
-            for (AstClause* clause : getClauses(*program, *rel)) {
+            for (AstSimpleClause* clause : getClauses(*program, *rel)) {
                 if (isFact(*clause)) {
                     continue;
                 }
@@ -899,7 +899,7 @@ void separateDBs(AstProgram* program) {
         bool is_edb = false;
         bool is_idb = false;
 
-        for (AstClause* clause : getClauses(*program, *relation)) {
+        for (AstSimpleClause* clause : getClauses(*program, *relation)) {
             if (isFact(*clause)) {
                 is_edb = true;
             } else {
@@ -919,17 +919,17 @@ void separateDBs(AstProgram* program) {
             program->addRelation(std::unique_ptr<AstRelation>(newEdbRel));
 
             // find all facts for the relation
-            for (AstClause* clause : getClauses(*program, *relation)) {
+            for (AstSimpleClause* clause : getClauses(*program, *relation)) {
                 if (isFact(*clause)) {
                     // clause is fact - add it to the new EDB relation
-                    AstClause* newEdbClause = clause->clone();
+                    AstSimpleClause* newEdbClause = clause->clone();
                     newEdbClause->getHead()->setQualifiedName(newEdbName);
-                    program->addClause(std::unique_ptr<AstClause>(newEdbClause));
+                    program->addClause(std::unique_ptr<AstSimpleClause>(newEdbClause));
                 }
             }
 
             // add a rule to the old relation that relates it to the new relation
-            auto* newIdbClause = new AstClause();
+            auto* newIdbClause = new AstSimpleClause();
             newIdbClause->setSrcLoc(nextSrcLoc(relation->getSrcLoc()));
 
             // oldname(arg1...argn) :- newname(arg1...argn)
@@ -948,7 +948,7 @@ void separateDBs(AstProgram* program) {
             newIdbClause->setHead(std::unique_ptr<AstAtom>(headAtom));
             newIdbClause->addToBody(std::unique_ptr<AstAtom>(bodyAtom));
 
-            program->addClause(std::unique_ptr<AstClause>(newIdbClause));
+            program->addClause(std::unique_ptr<AstSimpleClause>(newIdbClause));
         }
     }
 }
@@ -1024,7 +1024,7 @@ void replaceUnderscores(AstProgram* program) {
 
     M update;
     for (AstRelation* rel : program->getRelations()) {
-        for (AstClause* clause : getClauses(*program, *rel)) {
+        for (AstSimpleClause* clause : getClauses(*program, *rel)) {
             clause->apply(update);
         }
     }
@@ -1060,7 +1060,7 @@ bool MagicSetTransformer::transform(AstTranslationUnit& translationUnit) {
 
     // additions
     std::vector<AstQualifiedName> newQueryNames;
-    std::vector<AstClause*> newClauses;
+    std::vector<AstSimpleClause*> newClauses;
 
     // output handling
     std::vector<AstQualifiedName> outputQueries = adornment->getRelations();
@@ -1090,14 +1090,14 @@ bool MagicSetTransformer::transform(AstTranslationUnit& translationUnit) {
 
         // add an empty fact to the program
         // i.e. mN_outputname_ff...f().
-        auto* outputFact = new AstClause();
+        auto* outputFact = new AstSimpleClause();
         outputFact->setSrcLoc(nextSrcLoc(originalOutputRelation->getSrcLoc()));
         outputFact->setHead(std::make_unique<AstAtom>(magicOutputName));
-        program->addClause(std::unique_ptr<AstClause>(outputFact));
+        program->addClause(std::unique_ptr<AstSimpleClause>(outputFact));
 
         // perform the magic transformation based on the adornment for this output query
         for (AdornedClause adornedClause : adornedClauses) {
-            AstClause* clause = adornedClause.getClause();
+            AstSimpleClause* clause = adornedClause.getClause();
             AstQualifiedName originalName = clause->getHead()->getQualifiedName();
 
             // dont perform the magic transformation on ignored relations
@@ -1140,10 +1140,10 @@ bool MagicSetTransformer::transform(AstTranslationUnit& translationUnit) {
             }
 
             // create the adorned version of this clause
-            AstClause* newClause = clause->clone();
+            AstSimpleClause* newClause = clause->clone();
             newClause->getHead()->setQualifiedName(newRelName);
             // reorder atoms based on SIPS ordering
-            AstClause* tmp = reorderAtoms(newClause, reorderOrdering(adornedClause.getOrdering()));
+            AstSimpleClause* tmp = reorderAtoms(newClause, reorderOrdering(adornedClause.getOrdering()));
             delete newClause;
             newClause = tmp;
 
@@ -1223,7 +1223,7 @@ bool MagicSetTransformer::transform(AstTranslationUnit& translationUnit) {
                         }
 
                         // start setting up the magic rule
-                        auto* magicClause = new AstClause();
+                        auto* magicClause = new AstSimpleClause();
                         magicClause->setSrcLoc(nextSrcLoc(atom->getSrcLoc()));
 
                         // create the head of the magic rule
@@ -1321,7 +1321,7 @@ bool MagicSetTransformer::transform(AstTranslationUnit& translationUnit) {
                         }
 
                         // magic rule done! add it to the program
-                        program->addClause(std::unique_ptr<AstClause>(magicClause));
+                        program->addClause(std::unique_ptr<AstSimpleClause>(magicClause));
                     }
                 }
             }
@@ -1360,7 +1360,7 @@ bool MagicSetTransformer::transform(AstTranslationUnit& translationUnit) {
             // add the clause to the program and the set of new clauses
             newClause->setSrcLoc(nextSrcLoc(newClause->getSrcLoc()));
             newClauses.push_back(newClause);
-            program->addClause(std::unique_ptr<AstClause>(newClause));
+            program->addClause(std::unique_ptr<AstSimpleClause>(newClause));
         }
     }
 
@@ -1423,12 +1423,12 @@ bool MagicSetTransformer::transform(AstTranslationUnit& translationUnit) {
         }
 
         // add the clause to the program
-        auto* referringClause = new AstClause();
+        auto* referringClause = new AstSimpleClause();
         referringClause->setSrcLoc(nextSrcLoc(outputRelation->getSrcLoc()));
         referringClause->setHead(std::unique_ptr<AstAtom>(headatom));
         referringClause->addToBody(std::unique_ptr<AstAtom>(bodyatom));
 
-        program->addClause(std::unique_ptr<AstClause>(referringClause));
+        program->addClause(std::unique_ptr<AstSimpleClause>(referringClause));
     }
 
     // replace all "+underscoreX" variables with actual underscores

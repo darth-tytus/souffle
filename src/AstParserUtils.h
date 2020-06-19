@@ -24,7 +24,7 @@
 
 namespace souffle {
 
-class AstClause;
+class AstSimpleClause;
 class AstAtom;
 
 class RuleBody {
@@ -39,7 +39,7 @@ public:
 
     void disjunct(RuleBody other);
 
-    VecOwn<AstClause> toClauseBodies() const;
+    VecOwn<AstSimpleClause> toClauseBodies() const;
 
     // -- factory functions --
 

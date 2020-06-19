@@ -151,7 +151,8 @@ BoolDisjunctConstraint imply(const std::vector<BoolDisjunctVar>& vars, const Boo
  * computes for variables in the clause whether they are grounded
  */
 
-std::map<const AstArgument*, bool> getGroundedTerms(const AstTranslationUnit& tu, const AstClause& clause) {
+std::map<const AstArgument*, bool> getGroundedTerms(
+        const AstTranslationUnit& tu, const AstSimpleClause& clause) {
     struct Analysis : public AstConstraintAnalysis<BoolDisjunctVar> {
         const RelationDetailCache& relCache;
         std::set<const AstAtom*> ignore;
@@ -178,7 +179,7 @@ std::map<const AstArgument*, bool> getGroundedTerms(const AstTranslationUnit& tu
         }
 
         // also skip head if we don't have an inline qualifier
-        void visitClause(const AstClause& clause) override {
+        void visitSimpleClause(const AstSimpleClause& clause) override {
             if (auto clauseHead = clause.getHead()) {
                 auto relation = relCache.getRelation(clauseHead->getQualifiedName());
                 // Only skip the head if the relation ISN'T inline. Keeping the head will ground

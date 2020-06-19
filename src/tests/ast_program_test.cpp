@@ -44,10 +44,11 @@ inline std::unique_ptr<AstTranslationUnit> makeATU(std::string program) {
     return ParserDriver::parseTranslationUnit(program, e, d);
 }
 
-inline std::unique_ptr<AstClause> makeClause(std::string name, std::unique_ptr<AstArgument> headArgument) {
+inline std::unique_ptr<AstSimpleClause> makeClause(
+        std::string name, std::unique_ptr<AstArgument> headArgument) {
     auto headAtom = std::make_unique<AstAtom>(name);
     headAtom->addArgument(std::move(headArgument));
-    auto clause = std::make_unique<AstClause>();
+    auto clause = std::make_unique<AstSimpleClause>();
     clause->setHead(std::move(headAtom));
     return clause;
 }

@@ -46,7 +46,7 @@ namespace test {
 
 TEST(AstUtils, Grounded) {
     // create an example clause:
-    auto clause = std::make_unique<AstClause>();
+    auto clause = std::make_unique<AstSimpleClause>();
 
     // something like:
     //   r(X,Y,Z) :- a(X), X = Y, !b(Z).
@@ -112,7 +112,7 @@ TEST(AstUtils, GroundedRecords) {
 
     AstProgram& program = *tu->getProgram();
 
-    AstClause* clause = getClauses(program, "s")[0];
+    AstSimpleClause* clause = getClauses(program, "s")[0];
 
     // check construction
     EXPECT_EQ("s(x) :- \n   r([x,y]).", toString(*clause));
@@ -147,13 +147,13 @@ TEST(AstUtils, GroundTermPropagation) {
     AstProgram& program = *tu->getProgram();
 
     // check types in clauses
-    AstClause* a = getClauses(program, "p")[0];
+    AstSimpleClause* a = getClauses(program, "p")[0];
 
     EXPECT_EQ("p(a,b) :- \n   p(x,y),\n   r = [x,y],\n   s = r,\n   s = [w,v],\n   [w,v] = [a,b].",
             toString(*a));
 
-    std::unique_ptr<AstClause> res = ResolveAliasesTransformer::resolveAliases(*a);
-    std::unique_ptr<AstClause> cleaned = ResolveAliasesTransformer::removeTrivialEquality(*res);
+    std::unique_ptr<AstSimpleClause> res = ResolveAliasesTransformer::resolveAliases(*a);
+    std::unique_ptr<AstSimpleClause> cleaned = ResolveAliasesTransformer::removeTrivialEquality(*res);
 
     EXPECT_EQ(
             "p(x,y) :- \n   p(x,y),\n   [x,y] = [x,y],\n   [x,y] = [x,y],\n   [x,y] = [x,y],\n   [x,y] = "
@@ -178,12 +178,12 @@ TEST(AstUtils, GroundTermPropagation2) {
     AstProgram& program = *tu->getProgram();
 
     // check types in clauses
-    AstClause* a = getClauses(program, "p")[0];
+    AstSimpleClause* a = getClauses(program, "p")[0];
 
     EXPECT_EQ("p(a,b) :- \n   p(x,y),\n   x = y,\n   x = a,\n   y = b.", toString(*a));
 
-    std::unique_ptr<AstClause> res = ResolveAliasesTransformer::resolveAliases(*a);
-    std::unique_ptr<AstClause> cleaned = ResolveAliasesTransformer::removeTrivialEquality(*res);
+    std::unique_ptr<AstSimpleClause> res = ResolveAliasesTransformer::resolveAliases(*a);
+    std::unique_ptr<AstSimpleClause> cleaned = ResolveAliasesTransformer::removeTrivialEquality(*res);
 
     EXPECT_EQ("p(b,b) :- \n   p(b,b),\n   b = b,\n   b = b,\n   b = b.", toString(*res));
     EXPECT_EQ("p(b,b) :- \n   p(b,b).", toString(*cleaned));
@@ -317,19 +317,19 @@ TEST(AstUtils, ReorderClauseAtoms) {
     const auto& clauses = getClauses(program, *a);
     EXPECT_EQ(1, clauses.size());
 
-    AstClause* clause = clauses[0];
+    AstSimpleClause* clause = clauses[0];
     EXPECT_EQ("a(x) :- \n   b(x),\n   c(x),\n   1 != 2,\n   d(y),\n   !e(z),\n   c(z),\n   e(x).",
             toString(*clause));
 
     // Check trivial permutation
-    std::unique_ptr<AstClause> reorderedClause0 =
-            std::unique_ptr<AstClause>(reorderAtoms(clause, std::vector<unsigned int>({0, 1, 2, 3, 4})));
+    std::unique_ptr<AstSimpleClause> reorderedClause0 = std::unique_ptr<AstSimpleClause>(
+            reorderAtoms(clause, std::vector<unsigned int>({0, 1, 2, 3, 4})));
     EXPECT_EQ("a(x) :- \n   b(x),\n   c(x),\n   1 != 2,\n   d(y),\n   !e(z),\n   c(z),\n   e(x).",
             toString(*reorderedClause0));
 
     // Check more complex permutation
-    std::unique_ptr<AstClause> reorderedClause1 =
-            std::unique_ptr<AstClause>(reorderAtoms(clause, std::vector<unsigned int>({2, 3, 4, 1, 0})));
+    std::unique_ptr<AstSimpleClause> reorderedClause1 = std::unique_ptr<AstSimpleClause>(
+            reorderAtoms(clause, std::vector<unsigned int>({2, 3, 4, 1, 0})));
     EXPECT_EQ("a(x) :- \n   d(y),\n   c(z),\n   1 != 2,\n   e(x),\n   !e(z),\n   c(x),\n   b(x).",
             toString(*reorderedClause1));
 }

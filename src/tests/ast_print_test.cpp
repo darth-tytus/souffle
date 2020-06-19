@@ -47,10 +47,10 @@ inline std::unique_ptr<AstTranslationUnit> makePrintedATU(std::unique_ptr<AstTra
     return makeATU(ss.str());
 }
 
-inline std::unique_ptr<AstClause> makeClauseA(std::unique_ptr<AstArgument> headArgument) {
+inline std::unique_ptr<AstSimpleClause> makeClauseA(std::unique_ptr<AstArgument> headArgument) {
     auto headAtom = std::make_unique<AstAtom>("A");
     headAtom->addArgument(std::move(headArgument));
-    auto clause = std::make_unique<AstClause>();
+    auto clause = std::make_unique<AstSimpleClause>();
     clause->setHead(std::move(headAtom));
     return clause;
 }

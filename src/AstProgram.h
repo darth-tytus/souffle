@@ -56,7 +56,7 @@ public:
     }
 
     /** get clauses */
-    std::vector<AstClause*> getClauses() const {
+    std::vector<AstSimpleClause*> getClauses() const {
         return toPtrVector(clauses);
     }
 
@@ -94,19 +94,19 @@ public:
         return false;
     }
 
-    void setClauses(VecOwn<AstClause> newClauses) {
+    void setClauses(VecOwn<AstSimpleClause> newClauses) {
         clauses = std::move(newClauses);
     }
 
     /** add a clause */
-    void addClause(Own<AstClause> clause) {
+    void addClause(Own<AstSimpleClause> clause) {
         assert(clause != nullptr && "Undefined clause");
-        assert(clause->getHead() != nullptr && "Undefined head of the clause");
+        // assert(clause->getHead() != nullptr && "Undefined head of the clause");
         clauses.push_back(std::move(clause));
     }
 
     /** remove a clause */
-    bool removeClause(const AstClause* clause) {
+    bool removeClause(const AstSimpleClause* clause) {
         for (auto it = clauses.begin(); it != clauses.end(); it++) {
             if (**it == *clause) {
                 clauses.erase(it);
@@ -288,7 +288,7 @@ protected:
     VecOwn<AstFunctorDeclaration> functors;
 
     /** Program clauses */
-    VecOwn<AstClause> clauses;
+    VecOwn<AstSimpleClause> clauses;
 
     /** IO statements */
     VecOwn<AstIO> ios;

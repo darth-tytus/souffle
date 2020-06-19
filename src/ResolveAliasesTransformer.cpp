@@ -204,7 +204,7 @@ public:
 
 }  // namespace
 
-std::unique_ptr<AstClause> ResolveAliasesTransformer::resolveAliases(const AstClause& clause) {
+std::unique_ptr<AstSimpleClause> ResolveAliasesTransformer::resolveAliases(const AstSimpleClause& clause) {
     // -- utilities --
 
     // tests whether something is a variable
@@ -338,11 +338,12 @@ std::unique_ptr<AstClause> ResolveAliasesTransformer::resolveAliases(const AstCl
     }
 
     // III) compute resulting clause
-    return substitution(std::unique_ptr<AstClause>(clause.clone()));
+    return substitution(std::unique_ptr<AstSimpleClause>(clause.clone()));
 }
 
-std::unique_ptr<AstClause> ResolveAliasesTransformer::removeTrivialEquality(const AstClause& clause) {
-    std::unique_ptr<AstClause> res(cloneHead(&clause));
+std::unique_ptr<AstSimpleClause> ResolveAliasesTransformer::removeTrivialEquality(
+        const AstSimpleClause& clause) {
+    std::unique_ptr<AstSimpleClause> res(cloneHead(&clause));
 
     // add all literals, except filtering out t = t constraints
     for (AstLiteral* literal : clause.getBodyLiterals()) {
@@ -362,8 +363,9 @@ std::unique_ptr<AstClause> ResolveAliasesTransformer::removeTrivialEquality(cons
     return res;
 }
 
-std::unique_ptr<AstClause> ResolveAliasesTransformer::removeComplexTermsInAtoms(const AstClause& clause) {
-    std::unique_ptr<AstClause> res(clause.clone());
+std::unique_ptr<AstSimpleClause> ResolveAliasesTransformer::removeComplexTermsInAtoms(
+        const AstSimpleClause& clause) {
+    std::unique_ptr<AstSimpleClause> res(clause.clone());
 
     // get list of atoms
     std::vector<AstAtom*> atoms = getBodyLiterals<AstAtom>(*res);
@@ -444,7 +446,7 @@ bool ResolveAliasesTransformer::transform(AstTranslationUnit& translationUnit) {
     AstProgram& program = *translationUnit.getProgram();
 
     // get all clauses
-    std::vector<const AstClause*> clauses;
+    std::vector<const AstSimpleClause*> clauses;
     visitDepthFirst(program, [&](const AstRelation& rel) {
         for (const auto& clause : getClauses(program, rel)) {
             clauses.push_back(clause);
@@ -452,17 +454,17 @@ bool ResolveAliasesTransformer::transform(AstTranslationUnit& translationUnit) {
     });
 
     // clean all clauses
-    for (const AstClause* clause : clauses) {
+    for (const AstSimpleClause* clause : clauses) {
         // -- Step 1 --
         // get rid of aliases
-        std::unique_ptr<AstClause> noAlias = resolveAliases(*clause);
+        std::unique_ptr<AstSimpleClause> noAlias = resolveAliases(*clause);
 
         // clean up equalities
-        std::unique_ptr<AstClause> cleaned = removeTrivialEquality(*noAlias);
+        std::unique_ptr<AstSimpleClause> cleaned = removeTrivialEquality(*noAlias);
 
         // -- Step 2 --
         // restore simple terms in atoms
-        std::unique_ptr<AstClause> normalised = removeComplexTermsInAtoms(*cleaned);
+        std::unique_ptr<AstSimpleClause> normalised = removeComplexTermsInAtoms(*cleaned);
 
         // swap if changed
         if (*normalised != *clause) {

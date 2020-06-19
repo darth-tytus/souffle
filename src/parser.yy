@@ -292,7 +292,7 @@
 %type <Mov<Own<AstExecutionOrder>>>         exec_order
 %type <Mov<Own<AstExecutionPlan>>>          exec_plan
 %type <Mov<Own<AstExecutionPlan>>>          exec_plan_list
-%type <Mov<Own<AstClause>>>                 fact
+%type <Mov<Own<AstSimpleClause>>>                 fact
 %type <Mov<std::vector<TypeAttribute>>>     functor_arg_type_list
 %type <Mov<std::string>>                    functor_built_in
 %type <Mov<Own<AstFunctorDeclaration>>>     functor_decl
@@ -315,8 +315,8 @@
 %type <Mov<VecOwn<AstAttribute>>>           record_type_list
 %type <Mov<VecOwn<AstRelation>>>            relation_decl
 %type <std::set<RelationTag>>               relation_tags
-%type <Mov<VecOwn<AstClause>>>              rule
-%type <Mov<VecOwn<AstClause>>>              rule_def
+%type <Mov<VecOwn<AstSimpleClause>>>              rule
+%type <Mov<VecOwn<AstSimpleClause>>>              rule_def
 %type <Mov<RuleBody>>                       term
 %type <Mov<Own<AstType>>>                   type
 %type <Mov<std::vector<AstQualifiedName>>>  type_params
@@ -469,7 +469,7 @@ relation_tags
  */
 
 /* Fact */
-fact : atom DOT { $$ = mk<AstClause>($atom, Mov<VecOwn<AstLiteral>> {}, nullptr, @$); };
+fact : atom DOT { $$ = mk<AstSimpleClause>($atom, Mov<VecOwn<AstLiteral>> {}, nullptr, @$); };
 
 /* Rule */
 rule

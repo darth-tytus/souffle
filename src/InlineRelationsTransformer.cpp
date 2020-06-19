@@ -77,9 +77,9 @@ void normaliseInlinedHeads(AstProgram& program) {
             continue;
         }
 
-        for (AstClause* clause : getClauses(program, *rel)) {
+        for (AstSimpleClause* clause : getClauses(program, *rel)) {
             // Set up the new clause with an empty body and no arguments in the head
-            auto newClause = std::make_unique<AstClause>();
+            auto newClause = std::make_unique<AstSimpleClause>();
             newClause->setSrcLoc(clause->getSrcLoc());
             auto clauseHead = std::make_unique<AstAtom>(clause->getHead()->getQualifiedName());
 
@@ -176,7 +176,7 @@ void nameInlinedUnderscores(AstProgram& program) {
 /**
  * Checks if a given clause contains an atom that should be inlined.
  */
-bool containsInlinedAtom(const AstProgram& program, const AstClause& clause) {
+bool containsInlinedAtom(const AstProgram& program, const AstSimpleClause& clause) {
     bool foundInlinedAtom = false;
 
     visitDepthFirst(clause, [&](const AstAtom& atom) {
@@ -282,7 +282,7 @@ NullableVector<std::pair<AstArgument*, AstArgument*>> unifyAtoms(AstAtom* first,
  * If unification is unsuccessful, the vector of literals is marked as invalid.
  */
 std::pair<NullableVector<AstLiteral*>, std::vector<AstBinaryConstraint*>> inlineBodyLiterals(
-        AstAtom* atom, AstClause* atomInlineClause) {
+        AstAtom* atom, AstSimpleClause* atomInlineClause) {
     bool changed = false;
     std::vector<AstLiteral*> addedLits;
     std::vector<AstBinaryConstraint*> constraints;
@@ -292,7 +292,7 @@ std::pair<NullableVector<AstLiteral*>, std::vector<AstBinaryConstraint*>> inline
     static int inlineCount = 0;
 
     // Make a temporary clone so we can rename variables without fear
-    AstClause* atomClause = atomInlineClause->clone();
+    AstSimpleClause* atomClause = atomInlineClause->clone();
 
     struct VariableRenamer : public AstNodeMapper {
         int varnum;
@@ -428,7 +428,7 @@ std::vector<std::vector<AstLiteral*>> formNegatedLiterals(AstProgram& program, A
     std::vector<std::vector<AstBinaryConstraint*>> addedConstraints;
 
     // Go through every possible clause associated with the given atom
-    for (AstClause* inClause : getClauses(program, *getRelation(program, atom->getQualifiedName()))) {
+    for (AstSimpleClause* inClause : getClauses(program, *getRelation(program, atom->getQualifiedName()))) {
         // Form the replacement clause by inlining based on the current clause
         std::pair<NullableVector<AstLiteral*>, std::vector<AstBinaryConstraint*>> inlineResult =
                 inlineBodyLiterals(atom, inClause);
@@ -791,7 +791,7 @@ NullableVector<std::vector<AstLiteral*>> getInlinedLiteral(AstProgram& program, 
 
             // N new clauses should be formed, where N is the number of clauses
             // associated with the inlined relation
-            for (AstClause* inClause : getClauses(program, *rel)) {
+            for (AstSimpleClause* inClause : getClauses(program, *rel)) {
                 // Form the replacement clause
                 std::pair<NullableVector<AstLiteral*>, std::vector<AstBinaryConstraint*>> inlineResult =
                         inlineBodyLiterals(atom, inClause);
@@ -901,9 +901,9 @@ NullableVector<std::vector<AstLiteral*>> getInlinedLiteral(AstProgram& program, 
  * Returns a list of clauses that should replace the given clause after one step of inlining.
  * If no inlining can occur, the list will only contain a clone of the original clause.
  */
-std::vector<AstClause*> getInlinedClause(AstProgram& program, const AstClause& clause) {
+std::vector<AstSimpleClause*> getInlinedClause(AstProgram& program, const AstSimpleClause& clause) {
     bool changed = false;
-    std::vector<AstClause*> versions;
+    std::vector<AstSimpleClause*> versions;
 
     // Try to inline things contained in the arguments of the head first.
     // E.g. `a(x, max y : { b(y) }) :- c(x).`, where b should be inlined.
@@ -915,7 +915,7 @@ std::vector<AstClause*> getInlinedClause(AstProgram& program, const AstClause& c
 
         // Produce the new clauses with the replacement head atoms
         for (AstAtom* newHead : headVersions.getVector()) {
-            auto* newClause = new AstClause();
+            auto* newClause = new AstSimpleClause();
             newClause->setSrcLoc(clause.getSrcLoc());
 
             newClause->setHead(std::unique_ptr<AstAtom>(newHead));
@@ -954,7 +954,7 @@ std::vector<AstClause*> getInlinedClause(AstProgram& program, const AstClause& c
                 std::vector<std::vector<AstLiteral*>> bodyVersions = litVersions.getVector();
 
                 // Create the base clause with the current literal removed
-                auto baseClause = std::unique_ptr<AstClause>(cloneHead(&clause));
+                auto baseClause = std::unique_ptr<AstSimpleClause>(cloneHead(&clause));
                 for (AstLiteral* oldLit : bodyLiterals) {
                     if (currLit != oldLit) {
                         baseClause->addToBody(std::unique_ptr<AstLiteral>(oldLit->clone()));
@@ -962,7 +962,7 @@ std::vector<AstClause*> getInlinedClause(AstProgram& program, const AstClause& c
                 }
 
                 for (std::vector<AstLiteral*> body : bodyVersions) {
-                    AstClause* replacementClause = baseClause->clone();
+                    AstSimpleClause* replacementClause = baseClause->clone();
 
                     // Add in the current set of literals replacing the inlined literal
                     // In Case 2, each body contains exactly one literal
@@ -983,7 +983,7 @@ std::vector<AstClause*> getInlinedClause(AstProgram& program, const AstClause& c
 
     if (!changed) {
         // Case 3: No inlining changes, so a clone of the original should be returned
-        std::vector<AstClause*> ret;
+        std::vector<AstSimpleClause*> ret;
         ret.push_back(clause.clone());
         return ret;
     } else {
@@ -1008,7 +1008,7 @@ bool InlineRelationsTransformer::transform(AstTranslationUnit& translationUnit) 
     // terminate.
     bool clausesChanged = true;
     while (clausesChanged) {
-        std::set<AstClause*> clausesToDelete;
+        std::set<AstSimpleClause*> clausesToDelete;
         clausesChanged = false;
 
         // Go through each relation in the program and check if we need to inline any of its clauses
@@ -1019,15 +1019,15 @@ bool InlineRelationsTransformer::transform(AstTranslationUnit& translationUnit) 
             }
 
             // Go through the relation's clauses and try inlining them
-            for (AstClause* clause : getClauses(program, *rel)) {
+            for (AstSimpleClause* clause : getClauses(program, *rel)) {
                 if (containsInlinedAtom(program, *clause)) {
                     // Generate the inlined versions of this clause - the clause will be replaced by these
-                    std::vector<AstClause*> newClauses = getInlinedClause(program, *clause);
+                    std::vector<AstSimpleClause*> newClauses = getInlinedClause(program, *clause);
 
                     // Replace the clause with these equivalent versions
                     clausesToDelete.insert(clause);
-                    for (AstClause* replacementClause : newClauses) {
-                        program.addClause(std::unique_ptr<AstClause>(replacementClause));
+                    for (AstSimpleClause* replacementClause : newClauses) {
+                        program.addClause(std::unique_ptr<AstSimpleClause>(replacementClause));
                     }
 
                     // We've changed the program this iteration
@@ -1038,7 +1038,7 @@ bool InlineRelationsTransformer::transform(AstTranslationUnit& translationUnit) 
         }
 
         // Delete all clauses that were replaced
-        for (const AstClause* clause : clausesToDelete) {
+        for (const AstSimpleClause* clause : clausesToDelete) {
             program.removeClause(clause);
         }
     }

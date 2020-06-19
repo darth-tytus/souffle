@@ -66,7 +66,7 @@ inline AstQualifiedName makeRelationName(
 }
 
 std::unique_ptr<AstRelation> makeInfoRelation(
-        AstClause& originalClause, size_t originalClauseNum, AstTranslationUnit& translationUnit) {
+        AstSimpleClause& originalClause, size_t originalClauseNum, AstTranslationUnit& translationUnit) {
     AstQualifiedName name =
             makeRelationName(originalClause.getHead()->getQualifiedName(), "@info", originalClauseNum);
 
@@ -77,7 +77,7 @@ std::unique_ptr<AstRelation> makeInfoRelation(
     infoRelation->setRepresentation(RelationRepresentation::INFO);
 
     // create new clause containing a single fact
-    auto infoClause = new AstClause();
+    auto infoClause = new AstSimpleClause();
     auto infoClauseHead = new AstAtom();
     infoClauseHead->setQualifiedName(name);
 
@@ -185,7 +185,7 @@ std::unique_ptr<AstRelation> makeInfoRelation(
 
     // set clause head and add clause to info relation
     infoClause->setHead(std::unique_ptr<AstAtom>(infoClauseHead));
-    translationUnit.getProgram()->addClause(std::unique_ptr<AstClause>(infoClause));
+    translationUnit.getProgram()->addClause(std::unique_ptr<AstSimpleClause>(infoClause));
 
     return std::unique_ptr<AstRelation>(infoRelation);
 }
@@ -200,7 +200,7 @@ void transformEqrelRelation(AstProgram& program, AstRelation& rel) {
 
     // transitivity
     // transitive clause: A(x, z) :- A(x, y), A(y, z).
-    auto transitiveClause = new AstClause();
+    auto transitiveClause = new AstSimpleClause();
     auto transitiveClauseHead = new AstAtom(rel.getQualifiedName());
     transitiveClauseHead->addArgument(std::make_unique<AstVariable>("x"));
     transitiveClauseHead->addArgument(std::make_unique<AstVariable>("z"));
@@ -216,11 +216,11 @@ void transformEqrelRelation(AstProgram& program, AstRelation& rel) {
     transitiveClause->setHead(std::unique_ptr<AstAtom>(transitiveClauseHead));
     transitiveClause->addToBody(std::unique_ptr<AstLiteral>(transitiveClauseBody));
     transitiveClause->addToBody(std::unique_ptr<AstLiteral>(transitiveClauseBody2));
-    program.addClause(std::unique_ptr<AstClause>(transitiveClause));
+    program.addClause(std::unique_ptr<AstSimpleClause>(transitiveClause));
 
     // symmetric
     // symmetric clause: A(x, y) :- A(y, x).
-    auto symClause = new AstClause();
+    auto symClause = new AstSimpleClause();
     auto symClauseHead = new AstAtom(rel.getQualifiedName());
     symClauseHead->addArgument(std::make_unique<AstVariable>("x"));
     symClauseHead->addArgument(std::make_unique<AstVariable>("y"));
@@ -231,11 +231,11 @@ void transformEqrelRelation(AstProgram& program, AstRelation& rel) {
 
     symClause->setHead(std::unique_ptr<AstAtom>(symClauseHead));
     symClause->addToBody(std::unique_ptr<AstLiteral>(symClauseBody));
-    program.addClause(std::unique_ptr<AstClause>(symClause));
+    program.addClause(std::unique_ptr<AstSimpleClause>(symClause));
 
     // reflexivity
     // reflexive clause: A(x, x) :- A(x, _).
-    auto reflexiveClause = new AstClause();
+    auto reflexiveClause = new AstSimpleClause();
     auto reflexiveClauseHead = new AstAtom(rel.getQualifiedName());
     reflexiveClauseHead->addArgument(std::make_unique<AstVariable>("x"));
     reflexiveClauseHead->addArgument(std::make_unique<AstVariable>("x"));
@@ -246,7 +246,7 @@ void transformEqrelRelation(AstProgram& program, AstRelation& rel) {
 
     reflexiveClause->setHead(std::unique_ptr<AstAtom>(reflexiveClauseHead));
     reflexiveClause->addToBody(std::unique_ptr<AstLiteral>(reflexiveClauseBody));
-    program.addClause(std::unique_ptr<AstClause>(reflexiveClause));
+    program.addClause(std::unique_ptr<AstSimpleClause>(reflexiveClause));
 }
 
 namespace {

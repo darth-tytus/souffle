@@ -64,7 +64,7 @@ public:
     using constraint_type = std::shared_ptr<Constraint<AnalysisVar>>;
     using solution_type = std::map<const AstArgument*, value_type>;
 
-    virtual void collectConstraints(const AstClause& clause) {
+    virtual void collectConstraints(const AstSimpleClause& clause) {
         visitDepthFirstPreOrder(clause, *this);
     }
 
@@ -75,7 +75,7 @@ public:
      * @param debug a flag enabling the printing of debug information
      * @return an assignment mapping a property to each argument in the given clause
      */
-    solution_type analyse(const AstClause& clause, std::ostream* debugOutput = nullptr) {
+    solution_type analyse(const AstSimpleClause& clause, std::ostream* debugOutput = nullptr) {
         collectConstraints(clause);
 
         assignment = constraints.solve();

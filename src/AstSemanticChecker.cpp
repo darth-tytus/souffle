@@ -84,12 +84,12 @@ private:
     void checkAtom(const AstAtom& atom);
     void checkLiteral(const AstLiteral& literal);
     void checkAggregator(const AstAggregator& aggregator);
-    bool isDependent(const AstClause& agg1, const AstClause& agg2);
+    bool isDependent(const AstSimpleClause& agg1, const AstSimpleClause& agg2);
     void checkArgument(const AstArgument& arg);
     void checkConstant(const AstArgument& argument);
-    void checkFact(const AstClause& fact);
-    void checkClause(const AstClause& clause);
-    void checkComplexRule(std::set<const AstClause*> multiRule);
+    void checkFact(const AstSimpleClause& fact);
+    void checkClause(const AstSimpleClause& clause);
+    void checkComplexRule(std::set<const AstSimpleClause*> multiRule);
     void checkRelationDeclaration(const AstRelation& relation);
     void checkRelation(const AstRelation& relation);
 
@@ -157,7 +157,7 @@ AstSemanticCheckerImpl::AstSemanticCheckerImpl(AstTranslationUnit& tu) : tu(tu) 
     // Group clauses that stem from a single complex rule
     // with multiple headers/disjunction etc. The grouping
     // is performed via their source-location.
-    std::map<SrcLocation, std::set<const AstClause*>> multiRuleMap;
+    std::map<SrcLocation, std::set<const AstSimpleClause*>> multiRuleMap;
     for (auto* clause : program.getClauses()) {
         // collect clauses of a multi rule, i.e., they have the same source locator
         multiRuleMap[clause->getSrcLoc()].insert(clause);
@@ -576,7 +576,7 @@ void AstSemanticCheckerImpl::checkLiteral(const AstLiteral& literal) {
  * that contains an aggregate.
  * agg1 is dependent on agg2 if agg1 contains a variable which is grounded by agg2, and not by agg1.
  */
-bool AstSemanticCheckerImpl::isDependent(const AstClause& agg1, const AstClause& agg2) {
+bool AstSemanticCheckerImpl::isDependent(const AstSimpleClause& agg1, const AstSimpleClause& agg2) {
     auto groundedInAgg1 = getGroundedTerms(tu, agg1);
     auto groundedInAgg2 = getGroundedTerms(tu, agg2);
     bool dependent = false;
@@ -617,7 +617,7 @@ void AstSemanticCheckerImpl::checkAggregator(const AstAggregator& aggregator) {
         report.addError("Unsupported nested aggregate", inner->getSrcLoc());
     }
 
-    AstClause dummyClauseAggregator;
+    AstSimpleClause dummyClauseAggregator;
 
     visitDepthFirst(program, [&](const AstLiteral& parentLiteral) {
         visitDepthFirst(parentLiteral, [&](const AstAggregator& candidateAggregate) {
@@ -633,7 +633,7 @@ void AstSemanticCheckerImpl::checkAggregator(const AstAggregator& aggregator) {
     visitDepthFirst(program, [&](const AstLiteral& parentLiteral) {
         visitDepthFirst(parentLiteral, [&](const AstAggregator& /* otherAggregate */) {
             // Create the other aggregate's dummy clause
-            AstClause dummyClauseOther;
+            AstSimpleClause dummyClauseOther;
             dummyClauseOther.addToBody(std::unique_ptr<AstLiteral>(parentLiteral.clone()));
             // Check dependency between the aggregator and this one
             if (isDependent(dummyClauseAggregator, dummyClauseOther) &&
@@ -701,7 +701,7 @@ void AstSemanticCheckerImpl::checkConstant(const AstArgument& argument) {
 }
 
 /* Check if facts contain only constants */
-void AstSemanticCheckerImpl::checkFact(const AstClause& fact) {
+void AstSemanticCheckerImpl::checkFact(const AstSimpleClause& fact) {
     assert(isFact(fact));
 
     AstAtom* head = fact.getHead();
@@ -720,7 +720,7 @@ void AstSemanticCheckerImpl::checkFact(const AstClause& fact) {
     }
 }
 
-void AstSemanticCheckerImpl::checkClause(const AstClause& clause) {
+void AstSemanticCheckerImpl::checkClause(const AstSimpleClause& clause) {
     // check head atom
     checkAtom(*clause.getHead());
 
@@ -787,7 +787,7 @@ void AstSemanticCheckerImpl::checkClause(const AstClause& clause) {
     }
 }
 
-void AstSemanticCheckerImpl::checkComplexRule(std::set<const AstClause*> multiRule) {
+void AstSemanticCheckerImpl::checkComplexRule(std::set<const AstSimpleClause*> multiRule) {
     std::map<std::string, int> var_count;
     std::map<std::string, const AstVariable*> var_pos;
 
@@ -1030,11 +1030,11 @@ static const std::vector<SrcLocation> usesInvalidWitness(AstTranslationUnit& tu,
     // Create two versions of the original clause
 
     // Clause 1 - will remain equivalent to the original clause in terms of variable groundedness
-    auto originalClause = std::make_unique<AstClause>();
+    auto originalClause = std::make_unique<AstSimpleClause>();
     originalClause->setHead(std::make_unique<AstAtom>("*"));
 
     // Clause 2 - will have aggregators replaced with intrinsically grounded variables
-    auto aggregatorlessClause = std::make_unique<AstClause>();
+    auto aggregatorlessClause = std::make_unique<AstSimpleClause>();
     aggregatorlessClause->setHead(std::make_unique<AstAtom>("*"));
 
     // Construct both clauses in the same manner to match the original clause
@@ -1120,7 +1120,7 @@ static const std::vector<SrcLocation> usesInvalidWitness(AstTranslationUnit& tu,
 
 void AstSemanticCheckerImpl::checkWitnessProblem() {
     // Visit each clause to check if an invalid aggregator witness is used
-    visitDepthFirst(program, [&](const AstClause& clause) {
+    visitDepthFirst(program, [&](const AstSimpleClause& clause) {
         // Body literals of the clause to check
         std::vector<AstLiteral*> bodyLiterals = clause.getBodyLiterals();
 
@@ -1298,7 +1298,7 @@ void AstSemanticCheckerImpl::checkInlining() {
 
     // Check if an inlined clause ever contains a $
     for (const AstRelation* rel : inlinedRelations) {
-        for (AstClause* clause : getClauses(program, *rel)) {
+        for (AstSimpleClause* clause : getClauses(program, *rel)) {
             visitDepthFirst(*clause, [&](const AstArgument& arg) {
                 if (dynamic_cast<const AstCounter*>(&arg) != nullptr) {
                     report.addError(
@@ -1317,7 +1317,7 @@ void AstSemanticCheckerImpl::checkInlining() {
     AstRelationSet nonNegatableRelations;
     for (const AstRelation* rel : inlinedRelations) {
         bool foundNonNegatable = false;
-        for (const AstClause* clause : getClauses(program, *rel)) {
+        for (const AstSimpleClause* clause : getClauses(program, *rel)) {
             // Get the variables in the head
             std::set<std::string> headVariables;
             visitDepthFirst(
@@ -1460,7 +1460,7 @@ bool AstExecutionPlanChecker::transform(AstTranslationUnit& translationUnit) {
     for (const RelationScheduleStep& step : relationSchedule->schedule()) {
         const std::set<const AstRelation*>& scc = step.computed();
         for (const AstRelation* rel : scc) {
-            for (const AstClause* clause : getClauses(*translationUnit.getProgram(), *rel)) {
+            for (const AstSimpleClause* clause : getClauses(*translationUnit.getProgram(), *rel)) {
                 if (!recursiveClauses->recursive(clause)) {
                     continue;
                 }
@@ -1501,7 +1501,7 @@ void GroundedTermsChecker::verify(AstTranslationUnit& translationUnit) {
     auto&& report = translationUnit.getErrorReport();
 
     // -- check grounded variables and records --
-    visitDepthFirst(program.getClauses(), [&](const AstClause& clause) {
+    visitDepthFirst(program.getClauses(), [&](const AstSimpleClause& clause) {
         if (isFact(clause)) return;  // only interested in rules
 
         auto isGrounded = getGroundedTerms(translationUnit, clause);

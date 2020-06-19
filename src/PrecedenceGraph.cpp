@@ -197,12 +197,12 @@ void RelationDetailCache::run(const AstTranslationUnit& translationUnit) {
     const auto& program = *translationUnit.getProgram();
     for (auto* rel : program.getRelations()) {
         nameToRelation[rel->getQualifiedName()] = rel;
-        nameToClauses[rel->getQualifiedName()] = std::set<AstClause*>();
+        nameToClauses[rel->getQualifiedName()] = std::set<AstSimpleClause*>();
     }
     for (auto* clause : program.getClauses()) {
         const auto& relationName = clause->getHead()->getQualifiedName();
         if (nameToClauses.find(relationName) == nameToClauses.end()) {
-            nameToClauses[relationName] = std::set<AstClause*>();
+            nameToClauses[relationName] = std::set<AstSimpleClause*>();
         }
         nameToClauses.at(relationName).insert(clause);
     }
@@ -220,7 +220,7 @@ void RelationDetailCache::print(std::ostream& os) const {
 }
 
 void RecursiveClauses::run(const AstTranslationUnit& translationUnit) {
-    visitDepthFirst(*translationUnit.getProgram(), [&](const AstClause& clause) {
+    visitDepthFirst(*translationUnit.getProgram(), [&](const AstSimpleClause& clause) {
         if (computeIsRecursive(clause, translationUnit)) {
             recursiveClauses.insert(&clause);
         }
@@ -232,7 +232,7 @@ void RecursiveClauses::print(std::ostream& os) const {
 }
 
 bool RecursiveClauses::computeIsRecursive(
-        const AstClause& clause, const AstTranslationUnit& translationUnit) const {
+        const AstSimpleClause& clause, const AstTranslationUnit& translationUnit) const {
     const auto& relationDetail = *translationUnit.getAnalysis<RelationDetailCache>();
     const AstProgram& program = *translationUnit.getProgram();
 
@@ -268,7 +268,7 @@ bool RecursiveClauses::computeIsRecursive(
         }
 
         // check all atoms in the relations
-        for (const AstClause* cl : relationDetail.getClauses(cur)) {
+        for (const AstSimpleClause* cl : relationDetail.getClauses(cur)) {
             for (const AstAtom* at : getBodyLiterals<AstAtom>(*cl)) {
                 auto rel = relationDetail.getRelation(at->getQualifiedName());
                 if (rel == trg) {

@@ -46,7 +46,7 @@ using json11::Json;
 
 // forward declarations
 class AstAtom;
-class AstClause;
+class AstSimpleClause;
 class AstProgram;
 class AstRelation;
 class AstTranslationUnit;
@@ -289,7 +289,7 @@ private:
      * assigns names to unnamed variables such that enclosing
      * constructs may be cloned without losing the variable-identity
      */
-    void nameUnnamedVariables(AstClause* clause);
+    void nameUnnamedVariables(AstSimpleClause* clause);
 
     /** converts the given relation identifier into a relation name */
     std::string getRelationName(const AstQualifiedName& id) {
@@ -341,7 +341,8 @@ private:
         // the order of processed operations
         std::vector<const AstNode*> op_nesting;
 
-        std::unique_ptr<AstClause> getReorderedClause(const AstClause& clause, const int version) const;
+        std::unique_ptr<AstSimpleClause> getReorderedClause(
+                const AstSimpleClause& clause, const int version) const;
 
         arg_list* getArgList(
                 const AstNode* curNode, std::map<const AstNode*, std::unique_ptr<arg_list>>& nodeArgs) const;
@@ -350,7 +351,7 @@ private:
                 std::map<const AstNode*, std::unique_ptr<arg_list>>& nodeArgs,
                 std::map<const arg_list*, int>& arg_level, RamRelationReference* relation);
 
-        void createValueIndex(const AstClause& clause);
+        void createValueIndex(const AstSimpleClause& clause);
 
     protected:
         AstTranslator& translator;
@@ -361,8 +362,8 @@ private:
         // current nesting level
         int level = 0;
 
-        virtual std::unique_ptr<RamOperation> createOperation(const AstClause& clause);
-        virtual std::unique_ptr<RamCondition> createCondition(const AstClause& originalClause);
+        virtual std::unique_ptr<RamOperation> createOperation(const AstSimpleClause& clause);
+        virtual std::unique_ptr<RamCondition> createCondition(const AstSimpleClause& originalClause);
 
         /** translate RAM code for a constant value */
         std::unique_ptr<RamOperation> filterByConstraints(size_t level, const std::vector<AstArgument*>& args,
@@ -375,13 +376,13 @@ private:
                 : translator(translator), auxArityAnalysis(translator.auxArityAnalysis) {}
 
         std::unique_ptr<RamStatement> translateClause(
-                const AstClause& clause, const AstClause& originalClause, const int version = 0);
+                const AstSimpleClause& clause, const AstSimpleClause& originalClause, const int version = 0);
     };
 
     class ProvenanceClauseTranslator : public ClauseTranslator {
     protected:
-        std::unique_ptr<RamOperation> createOperation(const AstClause& clause) override;
-        std::unique_ptr<RamCondition> createCondition(const AstClause& originalClause) override;
+        std::unique_ptr<RamOperation> createOperation(const AstSimpleClause& clause) override;
+        std::unique_ptr<RamCondition> createCondition(const AstSimpleClause& originalClause) override;
 
     public:
         ProvenanceClauseTranslator(AstTranslator& translator) : ClauseTranslator(translator) {}
@@ -436,13 +437,13 @@ private:
             const std::set<const AstRelation*>& scc, const RecursiveClauses* recursiveClauses);
 
     /** translate RAM code for subroutine to get subproofs */
-    std::unique_ptr<RamStatement> makeSubproofSubroutine(const AstClause& clause);
+    std::unique_ptr<RamStatement> makeSubproofSubroutine(const AstSimpleClause& clause);
 
     /** translate RAM code for subroutine to get subproofs */
-    std::unique_ptr<RamStatement> makeSubproofSubroutineOpt(const AstClause& clause);
+    std::unique_ptr<RamStatement> makeSubproofSubroutineOpt(const AstSimpleClause& clause);
 
     /** translate RAM code for subroutine to get subproofs for non-existence of a tuple */
-    std::unique_ptr<RamStatement> makeNegationSubproofSubroutine(const AstClause& clause);
+    std::unique_ptr<RamStatement> makeNegationSubproofSubroutine(const AstSimpleClause& clause);
 
     /** translate AST to RAM Program */
     void translateProgram(const AstTranslationUnit& translationUnit);

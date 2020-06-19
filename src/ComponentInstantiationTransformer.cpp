@@ -53,7 +53,7 @@ struct ComponentContent {
     std::vector<std::unique_ptr<AstType>> types;
     std::vector<std::unique_ptr<AstRelation>> relations;
     std::vector<std::unique_ptr<AstIO>> ios;
-    std::vector<std::unique_ptr<AstClause>> clauses;
+    std::vector<std::unique_ptr<AstSimpleClause>> clauses;
 
     void add(std::unique_ptr<AstType>& type, ErrorReport& report) {
         // add to result content (check existence first)
@@ -87,7 +87,7 @@ struct ComponentContent {
         relations.push_back(std::move(rel));
     }
 
-    void add(std::unique_ptr<AstClause>& clause, ErrorReport& /* report */) {
+    void add(std::unique_ptr<AstSimpleClause>& clause, ErrorReport& /* report */) {
         clauses.push_back(std::move(clause));
     }
 
@@ -118,7 +118,7 @@ struct ComponentContent {
  */
 ComponentContent getInstantiatedContent(AstProgram& program, const AstComponentInit& componentInit,
         const AstComponent* enclosingComponent, const ComponentLookup& componentLookup,
-        std::vector<std::unique_ptr<AstClause>>& orphans, ErrorReport& report,
+        std::vector<std::unique_ptr<AstSimpleClause>>& orphans, ErrorReport& report,
         const TypeBinding& binding = TypeBinding(), unsigned int maxDepth = MAX_INSTANTIATION_DEPTH);
 
 /**
@@ -126,7 +126,7 @@ ComponentContent getInstantiatedContent(AstProgram& program, const AstComponentI
  */
 void collectContent(AstProgram& program, const AstComponent& component, const TypeBinding& binding,
         const AstComponent* enclosingComponent, const ComponentLookup& componentLookup, ComponentContent& res,
-        std::vector<std::unique_ptr<AstClause>>& orphans, const std::set<std::string>& overridden,
+        std::vector<std::unique_ptr<AstSimpleClause>>& orphans, const std::set<std::string>& overridden,
         ErrorReport& report, unsigned int maxInstantiationDepth) {
     // start with relations and clauses of the base components
     for (const auto& base : component.getBaseComponents()) {
@@ -240,7 +240,7 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
         if (overridden.count(cur->getHead()->getQualifiedName().getQualifiers()[0]) == 0) {
             AstRelation* rel = index[cur->getHead()->getQualifiedName()];
             if (rel != nullptr) {
-                std::unique_ptr<AstClause> instantiatedClause(cur->clone());
+                std::unique_ptr<AstSimpleClause> instantiatedClause(cur->clone());
                 res.add(instantiatedClause, report);
             } else {
                 orphans.emplace_back(cur->clone());
@@ -254,7 +254,7 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
         AstRelation* rel = index[cur->getHead()->getQualifiedName()];
         if (rel != nullptr) {
             // add orphan to current instance and delete from orphan list
-            std::unique_ptr<AstClause> instantiatedClause(cur->clone());
+            std::unique_ptr<AstSimpleClause> instantiatedClause(cur->clone());
             res.add(instantiatedClause, report);
             iter = orphans.erase(iter);
         } else {
@@ -265,8 +265,8 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
 
 ComponentContent getInstantiatedContent(AstProgram& program, const AstComponentInit& componentInit,
         const AstComponent* enclosingComponent, const ComponentLookup& componentLookup,
-        std::vector<std::unique_ptr<AstClause>>& orphans, ErrorReport& report, const TypeBinding& binding,
-        unsigned int maxDepth) {
+        std::vector<std::unique_ptr<AstSimpleClause>>& orphans, ErrorReport& report,
+        const TypeBinding& binding, unsigned int maxDepth) {
     // start with an empty list
     ComponentContent res;
 
@@ -432,7 +432,7 @@ bool ComponentInstantiationTransformer::transform(AstTranslationUnit& translatio
     auto* componentLookup = translationUnit.getAnalysis<ComponentLookup>();
 
     for (const auto& cur : program.instantiations) {
-        std::vector<std::unique_ptr<AstClause>> orphans;
+        std::vector<std::unique_ptr<AstSimpleClause>> orphans;
 
         ComponentContent content = getInstantiatedContent(
                 program, *cur, nullptr, *componentLookup, orphans, translationUnit.getErrorReport());

@@ -37,7 +37,7 @@
 
 namespace souffle {
 
-class AstClause;
+class AstSimpleClause;
 class AstTranslationUnit;
 
 /**
@@ -100,15 +100,15 @@ public:
 
     void print(std::ostream& os) const override;
 
-    bool recursive(const AstClause* clause) const {
+    bool recursive(const AstSimpleClause* clause) const {
         return recursiveClauses.count(clause) != 0u;
     }
 
 private:
-    std::set<const AstClause*> recursiveClauses;
+    std::set<const AstSimpleClause*> recursiveClauses;
 
     /** Determines whether the given clause is recursive within the given program */
-    bool computeIsRecursive(const AstClause& clause, const AstTranslationUnit& translationUnit) const;
+    bool computeIsRecursive(const AstSimpleClause& clause, const AstTranslationUnit& translationUnit) const;
 };
 
 /**
@@ -131,21 +131,21 @@ public:
         return nullptr;
     }
 
-    std::set<AstClause*> getClauses(const AstRelation* rel) const {
+    std::set<AstSimpleClause*> getClauses(const AstRelation* rel) const {
         assert(rel != nullptr && "invalid relation");
         return getClauses(rel->getQualifiedName());
     }
 
-    std::set<AstClause*> getClauses(const AstQualifiedName& name) const {
+    std::set<AstSimpleClause*> getClauses(const AstQualifiedName& name) const {
         if (nameToClauses.find(name) != nameToClauses.end()) {
             return nameToClauses.at(name);
         }
-        return std::set<AstClause*>();
+        return std::set<AstSimpleClause*>();
     }
 
 private:
     std::map<AstQualifiedName, AstRelation*> nameToRelation;
-    std::map<AstQualifiedName, std::set<AstClause*>> nameToClauses;
+    std::map<AstQualifiedName, std::set<AstSimpleClause*>> nameToClauses;
 };
 
 /**

@@ -30,7 +30,7 @@ namespace souffle {
 
 class AstAggregator;
 class AstBinaryConstraint;
-class AstClause;
+class AstSimpleClause;
 class AstLiteral;
 class AstProgram;
 class AstRecordInit;
@@ -55,7 +55,7 @@ public:
      * @param clause the clause to be processed
      * @return a modified clone of the processed clause
      */
-    static std::unique_ptr<AstClause> resolveAliases(const AstClause& clause);
+    static std::unique_ptr<AstSimpleClause> resolveAliases(const AstSimpleClause& clause);
 
     /**
      * Removes trivial equalities of the form t = t from the given clause.
@@ -63,7 +63,7 @@ public:
      * @param clause the clause to be processed
      * @return a modified clone of the given clause
      */
-    static std::unique_ptr<AstClause> removeTrivialEquality(const AstClause& clause);
+    static std::unique_ptr<AstSimpleClause> removeTrivialEquality(const AstSimpleClause& clause);
 
     /**
      * Removes complex terms in atoms, replacing them with constrained variables.
@@ -71,7 +71,7 @@ public:
      * @param clause the clause to be processed
      * @return a modified clone of the processed clause
      */
-    static std::unique_ptr<AstClause> removeComplexTermsInAtoms(const AstClause& clause);
+    static std::unique_ptr<AstSimpleClause> removeComplexTermsInAtoms(const AstSimpleClause& clause);
 
 private:
     bool transform(AstTranslationUnit& translationUnit) override;
@@ -134,12 +134,12 @@ private:
      * Determines whether an aggregate is single-valued,
      * ie the aggregate does not depend on the outer scope.
      */
-    static bool isSingleValued(const AstAggregator& agg, const AstClause& clause);
+    static bool isSingleValued(const AstAggregator& agg, const AstSimpleClause& clause);
     /**
      * findUniqueVariableName returns a variable name that hasn't appeared
      * in the given clause.
      */
-    static std::string findUniqueVariableName(const AstClause& clause);
+    static std::string findUniqueVariableName(const AstSimpleClause& clause);
     /**
      * findUniqueAggregateRelationName returns a synthesised aggregate
      * relation name that hasn't appeared
@@ -649,7 +649,8 @@ private:
      * @parem clause Clause to be processed.
      * @param newClauses a destination for the newly produced clauses.
      */
-    void transformClause(const AstClause& clause, std::vector<std::unique_ptr<AstClause>>& newClauses);
+    void transformClause(
+            const AstSimpleClause& clause, std::vector<std::unique_ptr<AstSimpleClause>>& newClauses);
 
     /**
      * Expand constraint on records position-wise.
@@ -667,7 +668,7 @@ private:
     /**
      * Determine if the clause contains at least one binary constraint which can be expanded.
      */
-    bool containsValidRecordConstraint(const AstClause&);
+    bool containsValidRecordConstraint(const AstSimpleClause&);
 
     /**
      * Determine if binary constraint can be expanded.
@@ -697,19 +698,19 @@ private:
      * Use mapping found by findVariablesRecordMapping to substitute
      * a records for each variable that operates on records.
      **/
-    bool replaceNamedVariables(AstTranslationUnit&, AstClause&);
+    bool replaceNamedVariables(AstTranslationUnit&, AstSimpleClause&);
 
     /**
      * For each variable equal to some anonymous record,
      * assign a value of that record.
      **/
     std::map<std::string, const AstRecordInit*> findVariablesRecordMapping(
-            AstTranslationUnit&, const AstClause&);
+            AstTranslationUnit&, const AstSimpleClause&);
 
     /**
      * For unnamed variables, replace each equation _ op record with true.
      **/
-    bool replaceUnnamedVariable(AstClause&);
+    bool replaceUnnamedVariable(AstSimpleClause&);
 };
 
 }  // end of namespace souffle

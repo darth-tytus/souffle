@@ -139,7 +139,7 @@ std::vector<std::vector<unsigned int>> extractPermutations(
  * with the atom at rightIdx in the right clause.
  * NOTE: index 0 refers to the head atom, index 1 to the first body atom, and so on.
  */
-bool isValidMove(const AstClause* left, size_t leftIdx, const AstClause* right, size_t rightIdx) {
+bool isValidMove(const AstSimpleClause* left, size_t leftIdx, const AstSimpleClause* right, size_t rightIdx) {
     // handle the case where one of the indices refers to the head
     if (leftIdx == 0 && rightIdx == 0) {
         const AstAtom* leftHead = left->getHead();
@@ -164,11 +164,11 @@ bool isValidMove(const AstClause* left, size_t leftIdx, const AstClause* right, 
 /**
  * Check whether a valid variable mapping exists for the given permutation.
  */
-bool isValidPermutation(
-        const AstClause* left, const AstClause* right, const std::vector<unsigned int>& permutation) {
+bool isValidPermutation(const AstSimpleClause* left, const AstSimpleClause* right,
+        const std::vector<unsigned int>& permutation) {
     // --- perform the permutation ---
 
-    auto reorderedLeft = std::unique_ptr<AstClause>(left->clone());
+    auto reorderedLeft = std::unique_ptr<AstSimpleClause>(left->clone());
 
     // deduce the body atom permutation from the full clause permutation
     std::vector<unsigned int> bodyPermutation(permutation.begin() + 1, permutation.end());
@@ -252,9 +252,9 @@ bool isValidPermutation(
 /**
  * Check whether two clauses are bijectively equivalent.
  */
-bool areBijectivelyEquivalent(const AstClause* left, const AstClause* right) {
+bool areBijectivelyEquivalent(const AstSimpleClause* left, const AstSimpleClause* right) {
     // only check bijective equivalence for a subset of the possible clauses
-    auto isValidClause = [&](const AstClause* clause) {
+    auto isValidClause = [&](const AstSimpleClause* clause) {
         // check that all body literals are atoms
         // i.e. avoid clauses with constraints or negations
         // TODO (azreika): extend to constraints and negations
@@ -339,18 +339,18 @@ bool areBijectivelyEquivalent(const AstClause* left, const AstClause* right) {
 bool reduceLocallyEquivalentClauses(AstTranslationUnit& translationUnit) {
     AstProgram& program = *translationUnit.getProgram();
 
-    std::vector<AstClause*> clausesToDelete;
+    std::vector<AstSimpleClause*> clausesToDelete;
 
     // split up each relation's rules into equivalence classes
     // TODO (azreika): consider turning this into an ast analysis instead
     for (AstRelation* rel : program.getRelations()) {
-        std::vector<std::vector<AstClause*>> equivalenceClasses;
+        std::vector<std::vector<AstSimpleClause*>> equivalenceClasses;
 
-        for (AstClause* clause : getClauses(program, *rel)) {
+        for (AstSimpleClause* clause : getClauses(program, *rel)) {
             bool added = false;
 
-            for (std::vector<AstClause*>& eqClass : equivalenceClasses) {
-                AstClause* rep = eqClass[0];
+            for (std::vector<AstSimpleClause*>& eqClass : equivalenceClasses) {
+                AstSimpleClause* rep = eqClass[0];
 
                 if (areBijectivelyEquivalent(rep, clause)) {
                     // clause belongs to an existing equivalence class, so delete it
@@ -363,7 +363,7 @@ bool reduceLocallyEquivalentClauses(AstTranslationUnit& translationUnit) {
 
             if (!added) {
                 // clause does not belong to any existing equivalence class, so keep it
-                std::vector<AstClause*> clauseToAdd = {clause};
+                std::vector<AstSimpleClause*> clauseToAdd = {clause};
                 equivalenceClasses.push_back(clauseToAdd);
             }
         }
@@ -391,30 +391,30 @@ bool reduceSingletonRelations(AstTranslationUnit& translationUnit) {
     auto* ioTypes = translationUnit.getAnalysis<IOType>();
 
     // Find all singleton relations to consider
-    std::vector<AstClause*> singletonRelationClauses;
+    std::vector<AstSimpleClause*> singletonRelationClauses;
     for (AstRelation* rel : program.getRelations()) {
         if (!ioTypes->isIO(rel) && getClauses(program, *rel).size() == 1) {
-            AstClause* clause = getClauses(program, *rel)[0];
+            AstSimpleClause* clause = getClauses(program, *rel)[0];
             singletonRelationClauses.push_back(clause);
         }
     }
 
     // Keep track of clauses found to be redundant
-    std::set<AstClause*> redundantClauses;
+    std::set<AstSimpleClause*> redundantClauses;
 
     // Keep track of canonical relation name for each redundant clause
     std::map<AstQualifiedName, AstQualifiedName> canonicalName;
 
     // Check pairwise equivalence of each singleton relation
     for (size_t i = 0; i < singletonRelationClauses.size(); i++) {
-        AstClause* first = singletonRelationClauses[i];
+        AstSimpleClause* first = singletonRelationClauses[i];
         if (redundantClauses.find(first) != redundantClauses.end()) {
             // Already found to be redundant, no need to check
             continue;
         }
 
         for (size_t j = i + 1; j < singletonRelationClauses.size(); j++) {
-            AstClause* second = singletonRelationClauses[j];
+            AstSimpleClause* second = singletonRelationClauses[j];
 
             // Note: Bijective-equivalence check does not care about the head relation name
             if (areBijectivelyEquivalent(first, second)) {
@@ -427,7 +427,7 @@ bool reduceSingletonRelations(AstTranslationUnit& translationUnit) {
     }
 
     // Remove redundant relation definitions
-    for (AstClause* clause : redundantClauses) {
+    for (AstSimpleClause* clause : redundantClauses) {
         auto relName = clause->getHead()->getQualifiedName();
         AstRelation* rel = getRelation(program, relName);
         assert(rel != nullptr && "relation does not exist in program");
@@ -471,7 +471,7 @@ bool reduceSingletonRelations(AstTranslationUnit& translationUnit) {
  */
 bool removeRedundantClauses(AstTranslationUnit& translationUnit) {
     auto& program = *translationUnit.getProgram();
-    auto isRedundant = [&](const AstClause* clause) {
+    auto isRedundant = [&](const AstSimpleClause* clause) {
         const auto* head = clause->getHead();
         for (const auto* lit : clause->getBodyLiterals()) {
             if (*head == *lit) {
@@ -481,10 +481,10 @@ bool removeRedundantClauses(AstTranslationUnit& translationUnit) {
         return false;
     };
 
-    std::set<std::unique_ptr<AstClause>> clausesToRemove;
+    std::set<std::unique_ptr<AstSimpleClause>> clausesToRemove;
     for (const auto* clause : program.getClauses()) {
         if (isRedundant(clause)) {
-            clausesToRemove.insert(std::unique_ptr<AstClause>(clause->clone()));
+            clausesToRemove.insert(std::unique_ptr<AstSimpleClause>(clause->clone()));
         }
     }
 
@@ -500,8 +500,8 @@ bool removeRedundantClauses(AstTranslationUnit& translationUnit) {
  */
 bool reduceClauseBodies(AstTranslationUnit& translationUnit) {
     auto& program = *translationUnit.getProgram();
-    std::set<std::unique_ptr<AstClause>> clausesToAdd;
-    std::set<std::unique_ptr<AstClause>> clausesToRemove;
+    std::set<std::unique_ptr<AstSimpleClause>> clausesToAdd;
+    std::set<std::unique_ptr<AstSimpleClause>> clausesToRemove;
 
     for (const auto* clause : program.getClauses()) {
         auto bodyLiterals = clause->getBodyLiterals();
@@ -516,7 +516,7 @@ bool reduceClauseBodies(AstTranslationUnit& translationUnit) {
         }
 
         if (!redundantPositions.empty()) {
-            auto minimisedClause = std::make_unique<AstClause>();
+            auto minimisedClause = std::make_unique<AstSimpleClause>();
             minimisedClause->setHead(std::unique_ptr<AstAtom>(clause->getHead()->clone()));
             for (size_t i = 0; i < bodyLiterals.size(); i++) {
                 if (!contains(redundantPositions, i)) {
@@ -524,7 +524,7 @@ bool reduceClauseBodies(AstTranslationUnit& translationUnit) {
                 }
             }
             clausesToAdd.insert(std::move(minimisedClause));
-            clausesToRemove.insert(std::unique_ptr<AstClause>(clause->clone()));
+            clausesToRemove.insert(std::unique_ptr<AstSimpleClause>(clause->clone()));
         }
     }
 
@@ -532,7 +532,7 @@ bool reduceClauseBodies(AstTranslationUnit& translationUnit) {
         program.removeClause(clause.get());
     }
     for (auto& clause : clausesToAdd) {
-        program.addClause(std::unique_ptr<AstClause>(clause->clone()));
+        program.addClause(std::unique_ptr<AstSimpleClause>(clause->clone()));
     }
 
     return !clausesToAdd.empty();

@@ -130,6 +130,11 @@ private:
     std::map<int, Own<AstExecutionOrder>> plans;
 };
 
+class AstClause : public AstNode {
+protected:
+    AstClause(SrcLocation loc) : AstNode(std::move(loc)){};
+};
+
 /**
  * Intermediate representation of a datalog clause.
  *
@@ -139,11 +144,11 @@ private:
  *
  * TODO (azreika): make clause abstract and split into two subclasses: Rule and Fact
  */
-class AstClause : public AstNode {
+class AstSimpleClause : public AstClause {
 public:
-    AstClause(Own<AstAtom> head = {}, VecOwn<AstLiteral> bodyLiterals = {}, Own<AstExecutionPlan> plan = {},
-            SrcLocation loc = {})
-            : AstNode(std::move(loc)), head(std::move(head)), bodyLiterals(std::move(bodyLiterals)),
+    AstSimpleClause(Own<AstAtom> head = {}, VecOwn<AstLiteral> bodyLiterals = {},
+            Own<AstExecutionPlan> plan = {}, SrcLocation loc = {})
+            : AstClause(std::move(loc)), head(std::move(head)), bodyLiterals(std::move(bodyLiterals)),
               plan(std::move(plan)) {}
 
     /** Add a Literal to the body of the clause */
@@ -186,8 +191,8 @@ public:
         plan = nullptr;
     }
 
-    AstClause* clone() const override {
-        return new AstClause(
+    AstSimpleClause* clone() const override {
+        return new AstSimpleClause(
                 souffle::clone(head), souffle::clone(bodyLiterals), souffle::clone(plan), getSrcLoc());
     }
 
@@ -221,7 +226,7 @@ protected:
     }
 
     bool equal(const AstNode& node) const override {
-        const auto& other = static_cast<const AstClause&>(node);
+        const auto& other = static_cast<const AstSimpleClause&>(node);
         return equal_ptr(head, other.head) && equal_targets(bodyLiterals, other.bodyLiterals) &&
                equal_ptr(plan, other.plan);
     }

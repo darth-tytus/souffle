@@ -335,7 +335,7 @@ std::vector<unsigned int> applySips(sips_t sipsFunction, std::vector<AstAtom*> a
     return newOrder;
 }
 
-AstClause* reorderClauseWithSips(sips_t sipsFunction, AstClause* clause) {
+AstSimpleClause* reorderClauseWithSips(sips_t sipsFunction, AstSimpleClause* clause) {
     // ignore clauses with fixed execution plans
     if (clause->getExecutionPlan() != nullptr) {
         return nullptr;
@@ -371,15 +371,15 @@ bool ReorderLiteralsTransformer::transform(AstTranslationUnit& translationUnit) 
     auto sipsFunction = getSipsFunction(sipsChosen);
 
     // literal reordering is a rule-local transformation
-    std::vector<AstClause*> clausesToRemove;
+    std::vector<AstSimpleClause*> clausesToRemove;
 
     for (const AstRelation* rel : program.getRelations()) {
-        for (AstClause* clause : getClauses(program, *rel)) {
-            AstClause* newClause = reorderClauseWithSips(sipsFunction, clause);
+        for (AstSimpleClause* clause : getClauses(program, *rel)) {
+            AstSimpleClause* newClause = reorderClauseWithSips(sipsFunction, clause);
             if (newClause != nullptr) {
                 // reordering needed - swap around
                 clausesToRemove.push_back(clause);
-                program.addClause(std::unique_ptr<AstClause>(newClause));
+                program.addClause(std::unique_ptr<AstSimpleClause>(newClause));
             }
         }
     }
@@ -434,15 +434,15 @@ bool ReorderLiteralsTransformer::transform(AstTranslationUnit& translationUnit) 
         };
 
         // change the ordering of literals within clauses
-        std::vector<AstClause*> clausesToRemove;
+        std::vector<AstSimpleClause*> clausesToRemove;
 
         for (const AstRelation* rel : program.getRelations()) {
-            for (AstClause* clause : getClauses(program, *rel)) {
-                AstClause* newClause = reorderClauseWithSips(profilerSips, clause);
+            for (AstSimpleClause* clause : getClauses(program, *rel)) {
+                AstSimpleClause* newClause = reorderClauseWithSips(profilerSips, clause);
                 if (newClause != nullptr) {
                     // reordering needed - swap around
                     clausesToRemove.push_back(clause);
-                    program.addClause(std::unique_ptr<AstClause>(newClause));
+                    program.addClause(std::unique_ptr<AstSimpleClause>(newClause));
                 }
             }
         }

@@ -458,8 +458,8 @@ std::unique_ptr<RamCondition> AstTranslator::translateConstraint(
     return ConstraintTranslator(*this, index)(*lit);
 }
 
-std::unique_ptr<AstClause> AstTranslator::ClauseTranslator::getReorderedClause(
-        const AstClause& clause, const int version) const {
+std::unique_ptr<AstSimpleClause> AstTranslator::ClauseTranslator::getReorderedClause(
+        const AstSimpleClause& clause, const int version) const {
     const auto plan = clause.getExecutionPlan();
 
     // check whether there is an imposed order constraint
@@ -475,7 +475,7 @@ std::unique_ptr<AstClause> AstTranslator::ClauseTranslator::getReorderedClause(
     const auto& order = orders[version];
 
     // create a copy and fix order
-    std::unique_ptr<AstClause> reorderedClause(clause.clone());
+    std::unique_ptr<AstSimpleClause> reorderedClause(clause.clone());
 
     // Change order to start at zero
     std::vector<unsigned int> newOrder(order->getOrder().size());
@@ -539,7 +539,7 @@ void AstTranslator::ClauseTranslator::indexValues(const AstNode* curNode,
 }
 
 /** index values in rule */
-void AstTranslator::ClauseTranslator::createValueIndex(const AstClause& clause) {
+void AstTranslator::ClauseTranslator::createValueIndex(const AstSimpleClause& clause) {
     for (const auto* atom : getBodyLiterals<AstAtom>(clause)) {
         // std::map<const arg_list*, int> arg_level;
         std::map<const AstNode*, std::unique_ptr<arg_list>> nodeArgs;
@@ -590,7 +590,8 @@ void AstTranslator::ClauseTranslator::createValueIndex(const AstClause& clause) 
     });
 }
 
-std::unique_ptr<RamOperation> AstTranslator::ClauseTranslator::createOperation(const AstClause& clause) {
+std::unique_ptr<RamOperation> AstTranslator::ClauseTranslator::createOperation(
+        const AstSimpleClause& clause) {
     const auto head = clause.getHead();
 
     std::vector<std::unique_ptr<RamExpression>> values;
@@ -640,7 +641,7 @@ std::unique_ptr<RamOperation> AstTranslator::ClauseTranslator::createOperation(c
 }
 
 std::unique_ptr<RamOperation> AstTranslator::ProvenanceClauseTranslator::createOperation(
-        const AstClause& clause) {
+        const AstSimpleClause& clause) {
     std::vector<std::unique_ptr<RamExpression>> values;
 
     // get all values in the body
@@ -672,7 +673,7 @@ std::unique_ptr<RamOperation> AstTranslator::ProvenanceClauseTranslator::createO
 }
 
 std::unique_ptr<RamCondition> AstTranslator::ClauseTranslator::createCondition(
-        const AstClause& originalClause) {
+        const AstSimpleClause& originalClause) {
     const auto head = originalClause.getHead();
 
     // add stopping criteria for nullary relations
@@ -684,7 +685,7 @@ std::unique_ptr<RamCondition> AstTranslator::ClauseTranslator::createCondition(
 }
 
 std::unique_ptr<RamCondition> AstTranslator::ProvenanceClauseTranslator::createCondition(
-        const AstClause& /* originalClause */) {
+        const AstSimpleClause& /* originalClause */) {
     return nullptr;
 }
 
@@ -720,7 +721,7 @@ std::unique_ptr<RamOperation> AstTranslator::ClauseTranslator::filterByConstrain
 
 /** generate RAM code for a clause */
 std::unique_ptr<RamStatement> AstTranslator::ClauseTranslator::translateClause(
-        const AstClause& clause, const AstClause& originalClause, const int version) {
+        const AstSimpleClause& clause, const AstSimpleClause& originalClause, const int version) {
     if (auto reorderedClause = getReorderedClause(clause, version)) {
         // translate reordered clause
         return translateClause(*reorderedClause, originalClause, version);
@@ -987,7 +988,7 @@ std::unique_ptr<RamStatement> AstTranslator::translateNonRecursiveRelation(
     std::unique_ptr<RamRelationReference> rrel = translateRelation(&rel);
 
     /* iterate over all clauses that belong to the relation */
-    for (AstClause* clause : getClauses(*program, rel)) {
+    for (AstSimpleClause* clause : getClauses(*program, rel)) {
         // skip recursive rules
         if (recursiveClauses->recursive(clause)) {
             continue;
@@ -1049,7 +1050,7 @@ std::unique_ptr<RamStatement> AstTranslator::translateNonRecursiveRelation(
  * A utility function assigning names to unnamed variables such that enclosing
  * constructs may be cloned without losing the variable-identity.
  */
-void AstTranslator::nameUnnamedVariables(AstClause* clause) {
+void AstTranslator::nameUnnamedVariables(AstSimpleClause* clause) {
     // the node mapper conducting the actual renaming
     struct Instantiator : public AstNodeMapper {
         mutable int counter = 0;
@@ -1176,7 +1177,7 @@ std::unique_ptr<RamStatement> AstTranslator::translateRecursiveRelation(
                 }
 
                 // modify the processed rule to use delta relation and write to new relation
-                std::unique_ptr<AstClause> r1(cl->clone());
+                std::unique_ptr<AstSimpleClause> r1(cl->clone());
                 r1->getHead()->setQualifiedName(translateNewRelation(rel)->get()->getName());
                 getBodyLiterals<AstAtom>(*r1)[j]->setQualifiedName(
                         translateDeltaRelation(atomRelation)->get()->getName());
@@ -1298,9 +1299,9 @@ std::unique_ptr<RamStatement> AstTranslator::translateRecursiveRelation(
 }
 
 /** make a subroutine to search for subproofs */
-std::unique_ptr<RamStatement> AstTranslator::makeSubproofSubroutine(const AstClause& clause) {
+std::unique_ptr<RamStatement> AstTranslator::makeSubproofSubroutine(const AstSimpleClause& clause) {
     // make intermediate clause with constraints
-    std::unique_ptr<AstClause> intermediateClause(clause.clone());
+    std::unique_ptr<AstSimpleClause> intermediateClause(clause.clone());
 
     // name unnamed variables
     nameUnnamedVariables(intermediateClause.get());
@@ -1369,7 +1370,7 @@ std::unique_ptr<RamStatement> AstTranslator::makeSubproofSubroutine(const AstCla
 }
 
 /** make a subroutine to search for subproofs for the non-existence of a tuple */
-std::unique_ptr<RamStatement> AstTranslator::makeNegationSubproofSubroutine(const AstClause& clause) {
+std::unique_ptr<RamStatement> AstTranslator::makeNegationSubproofSubroutine(const AstSimpleClause& clause) {
     // TODO (taipan-snake): Currently we only deal with atoms (no constraints or negations or aggregates
     // or anything else...)
     //
@@ -1381,7 +1382,7 @@ std::unique_ptr<RamStatement> AstTranslator::makeNegationSubproofSubroutine(cons
     // ...
 
     // clone clause for mutation
-    auto clauseReplacedAggregates = std::unique_ptr<AstClause>(clause.clone());
+    auto clauseReplacedAggregates = std::unique_ptr<AstSimpleClause>(clause.clone());
 
     int aggNumber = 0;
     struct AggregatesToVariables : public AstNodeMapper {
@@ -1450,7 +1451,7 @@ std::unique_ptr<RamStatement> AstTranslator::makeNegationSubproofSubroutine(cons
     std::vector<std::unique_ptr<RamStatement>> searchSequence;
 
     // make a copy so that when we mutate clause, pointers to objects in newClause are not affected
-    auto newClause = std::unique_ptr<AstClause>(clauseReplacedAggregates->clone());
+    auto newClause = std::unique_ptr<AstSimpleClause>(clauseReplacedAggregates->clone());
 
     // go through each body atom and create a return
     size_t litNumber = 0;
@@ -1699,7 +1700,7 @@ void AstTranslator::translateProgram(const AstTranslationUnit& translationUnit) 
 
     // add subroutines for each clause
     if (Global::config().has("provenance")) {
-        visitDepthFirst(*program, [&](const AstClause& clause) {
+        visitDepthFirst(*program, [&](const AstSimpleClause& clause) {
             std::stringstream relName;
             relName << clause.getHead()->getQualifiedName();
 

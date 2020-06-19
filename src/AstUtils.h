@@ -26,7 +26,7 @@ namespace souffle {
 
 // some forward declarations
 class AstAtom;
-class AstClause;
+class AstSimpleClause;
 class AstConstraint;
 class AstFunctorDeclaration;
 class AstIntrinsicFunctor;
@@ -91,7 +91,7 @@ std::vector<T*> getBodyLiterals(const C& clause) {
  * @param name the name of the relation to search for
  * @return vector of clauses describing the relation with the given name
  */
-std::vector<AstClause*> getClauses(const AstProgram& program, const AstQualifiedName& relationName);
+std::vector<AstSimpleClause*> getClauses(const AstProgram& program, const AstQualifiedName& relationName);
 
 /**
  * Returns a vector of clauses in the program describing the given relation.
@@ -100,7 +100,7 @@ std::vector<AstClause*> getClauses(const AstProgram& program, const AstQualified
  * @param rel the relation to search for
  * @return vector of clauses describing the given relation
  */
-std::vector<AstClause*> getClauses(const AstProgram& program, const AstRelation& rel);
+std::vector<AstSimpleClause*> getClauses(const AstProgram& program, const AstRelation& rel);
 
 /**
  * Returns the relation with the given name in the program.
@@ -151,7 +151,7 @@ const AstRelation* getAtomRelation(const AstAtom* atom, const AstProgram* progra
  * @param program the program containing the relations
  * @return relation referenced by the clause head
  */
-const AstRelation* getHeadRelation(const AstClause* clause, const AstProgram* program);
+const AstRelation* getHeadRelation(const AstSimpleClause* clause, const AstProgram* program);
 
 /**
  * Returns the relations referenced in the body of the given clause.
@@ -159,7 +159,7 @@ const AstRelation* getHeadRelation(const AstClause* clause, const AstProgram* pr
  * @param program the program containing the relations
  * @return relation referenced in the clause body
  */
-std::set<const AstRelation*> getBodyRelations(const AstClause* clause, const AstProgram* program);
+std::set<const AstRelation*> getBodyRelations(const AstSimpleClause* clause, const AstProgram* program);
 
 /**
  * Returns the index of a clause within its relation, ignoring facts.
@@ -168,7 +168,7 @@ std::set<const AstRelation*> getBodyRelations(const AstClause* clause, const Ast
  * @param clause the clause to get the index of
  * @return the index of the clause ignoring facts; 0 for facts
  */
-size_t getClauseNum(const AstProgram* program, const AstClause* clause);
+size_t getClauseNum(const AstProgram* program, const AstSimpleClause* clause);
 
 /**
  * Returns whether the given relation has any clauses which contain a negation of a specific relation.
@@ -196,26 +196,26 @@ bool hasClauseWithAggregatedRelation(const AstRelation* relation, const AstRelat
  * @param clause the clause to check
  * @return true iff the clause is recursive
  */
-bool isRecursiveClause(const AstClause& clause);
+bool isRecursiveClause(const AstSimpleClause& clause);
 
 /**
  * Returns whether the given clause is a fact
  * @return true iff the clause is a fact
  */
-bool isFact(const AstClause& clause);
+bool isFact(const AstSimpleClause& clause);
 
 /**
  * Returns whether the given clause is a rule
  * @return true iff the clause is a rule
  */
-bool isRule(const AstClause& clause);
+bool isRule(const AstSimpleClause& clause);
 
 /**
  * Returns a clause which contains head of the given clause
  * @param clause the clause which head to be cloned
  * @return pointer to clause which has head cloned from given clause
  */
-AstClause* cloneHead(const AstClause* clause);
+AstSimpleClause* cloneHead(const AstSimpleClause* clause);
 
 /**
  * Reorders the atoms of a clause to be in the given order.
@@ -227,7 +227,7 @@ AstClause* cloneHead(const AstClause* clause);
  * @param clause clause to reorder atoms in
  * @param newOrder new order of atoms; atoms[i] = atoms[newOrder[i]]
  */
-AstClause* reorderAtoms(const AstClause* clause, const std::vector<unsigned int>& newOrder);
+AstSimpleClause* reorderAtoms(const AstSimpleClause* clause, const std::vector<unsigned int>& newOrder);
 
 /**
  * Negate an ast constraint

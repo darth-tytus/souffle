@@ -30,7 +30,7 @@
 
 namespace souffle {
 
-class AstClause;
+class AstSimpleClause;
 class AstComponent;
 class AstComponentInit;
 class AstFunctorDeclaration;
@@ -61,7 +61,7 @@ public:
     void addFunctorDeclaration(std::unique_ptr<AstFunctorDeclaration> f);
     void addIO(std::unique_ptr<AstIO> d);
     void addType(std::unique_ptr<AstType> type);
-    void addClause(std::unique_ptr<AstClause> c);
+    void addClause(std::unique_ptr<AstSimpleClause> c);
     void addComponent(std::unique_ptr<AstComponent> c);
     void addInstantiation(std::unique_ptr<AstComponentInit> ci);
     void addPragma(std::unique_ptr<AstPragma> p);

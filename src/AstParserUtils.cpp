@@ -84,12 +84,12 @@ void RuleBody::disjunct(RuleBody other) {
     }
 }
 
-VecOwn<AstClause> RuleBody::toClauseBodies() const {
+VecOwn<AstSimpleClause> RuleBody::toClauseBodies() const {
     // collect clause results
-    VecOwn<AstClause> bodies;
+    VecOwn<AstSimpleClause> bodies;
     for (const clause& cur : dnf) {
-        bodies.push_back(mk<AstClause>());
-        AstClause& clause = *bodies.back();
+        bodies.push_back(mk<AstSimpleClause>());
+        AstSimpleClause& clause = *bodies.back();
 
         for (const literal& lit : cur) {
             // extract literal

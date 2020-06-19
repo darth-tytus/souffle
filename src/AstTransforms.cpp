@@ -105,7 +105,7 @@ bool RemoveRelationCopiesTransformer::removeRelationCopies(AstTranslationUnit& t
         const auto& clauses = getClauses(program, *rel);
         if (!ioType->isIO(rel) && clauses.size() == 1u) {
             // .. of shape r(x,y,..) :- s(x,y,..)
-            AstClause* cl = clauses[0];
+            AstSimpleClause* cl = clauses[0];
             std::vector<AstAtom*> bodyAtoms = getBodyLiterals<AstAtom>(*cl);
             if (!isFact(*cl) && cl->getBodyLiterals().size() == 1u && bodyAtoms.size() == 1u) {
                 AstAtom* atom = bodyAtoms[0];
@@ -235,7 +235,8 @@ bool UniqueAggregationVariablesTransformer::transform(AstTranslationUnit& transl
     return changed;
 }
 
-std::string MaterializeSingletonAggregationTransformer::findUniqueVariableName(const AstClause& clause) {
+std::string MaterializeSingletonAggregationTransformer::findUniqueVariableName(
+        const AstSimpleClause& clause) {
     static int counter = 0;
     std::set<std::string> variableNames;
     visitDepthFirst(clause, [&](const AstVariable& variable) { variableNames.insert(variable.getName()); });
@@ -258,27 +259,27 @@ std::string MaterializeSingletonAggregationTransformer::findUniqueAggregateRelat
 
 bool MaterializeSingletonAggregationTransformer::transform(AstTranslationUnit& translationUnit) {
     AstProgram& program = *translationUnit.getProgram();
-    std::set<std::pair<AstAggregator*, AstClause*>> pairs;
+    std::set<std::pair<AstAggregator*, AstSimpleClause*>> pairs;
     // collect references to clause / aggregate pairs
-    visitDepthFirst(program, [&](const AstClause& clause) {
+    visitDepthFirst(program, [&](const AstSimpleClause& clause) {
         visitDepthFirst(clause, [&](const AstAggregator& agg) {
             if (!isSingleValued(agg, clause)) {
                 return;
             }
             auto* foundAggregate = const_cast<AstAggregator*>(&agg);
-            auto* foundClause = const_cast<AstClause*>(&clause);
+            auto* foundClause = const_cast<AstSimpleClause*>(&clause);
             pairs.insert(std::make_pair(foundAggregate, foundClause));
         });
     });
     for (auto pair : pairs) {
         // Clone the aggregate that we're going to be deleting.
         auto aggregate = souffle::clone(pair.first);
-        AstClause* clause = pair.second;
+        AstSimpleClause* clause = pair.second;
         // synthesise an aggregate relation
         // __agg_rel_0()
         auto aggRel = std::make_unique<AstRelation>();
         auto aggHead = std::make_unique<AstAtom>();
-        auto aggClause = std::make_unique<AstClause>();
+        auto aggClause = std::make_unique<AstSimpleClause>();
 
         std::string aggRelName = findUniqueAggregateRelationName(program);
         aggRel->setQualifiedName(aggRelName);
@@ -331,7 +332,7 @@ bool MaterializeSingletonAggregationTransformer::transform(AstTranslationUnit& t
 }
 
 bool MaterializeSingletonAggregationTransformer::isSingleValued(
-        const AstAggregator& agg, const AstClause& clause) {
+        const AstAggregator& agg, const AstSimpleClause& clause) {
     std::map<std::string, int> occurrences;
     visitDepthFirst(clause, [&](const AstVariable& v) {
         if (occurrences.find(v.getName()) == occurrences.end()) {
@@ -361,7 +362,7 @@ bool MaterializeAggregationQueriesTransformer::materializeAggregationQueries(
 
     // if an aggregator has a body consisting of more than an atom => create new relation
     int counter = 0;
-    visitDepthFirst(program, [&](const AstClause& clause) {
+    visitDepthFirst(program, [&](const AstSimpleClause& clause) {
         visitDepthFirst(clause, [&](const AstAggregator& agg) {
             // check whether a materialization is required
             if (!needsMaterializedRelation(agg)) {
@@ -376,7 +377,7 @@ bool MaterializeAggregationQueriesTransformer::materializeAggregationQueries(
                 relName = "__agg_body_rel_" + toString(counter++);
             }
             // create the new clause for the materialised rule
-            auto* aggClause = new AstClause();
+            auto* aggClause = new AstSimpleClause();
             // create the body of the new materialised rule
             for (const auto& cur : agg.getBodyLiterals()) {
                 aggClause->addToBody(std::unique_ptr<AstLiteral>(cur->clone()));
@@ -460,7 +461,7 @@ bool MaterializeAggregationQueriesTransformer::materializeAggregationQueries(
                         (isOfKind(argTypes[cur], TypeAttribute::Signed)) ? "number" : "symbol"));
             }
 
-            program.addClause(std::unique_ptr<AstClause>(aggClause));
+            program.addClause(std::unique_ptr<AstSimpleClause>(aggClause));
             program.addRelation(std::unique_ptr<AstRelation>(rel));
 
             // -- update aggregate --
@@ -569,11 +570,11 @@ bool RemoveEmptyRelationsTransformer::removeEmptyRelationUses(
     // (2) drop negations of empty relations
     //
     // get all clauses
-    std::vector<const AstClause*> clauses;
-    visitDepthFirst(program, [&](const AstClause& cur) { clauses.push_back(&cur); });
+    std::vector<const AstSimpleClause*> clauses;
+    visitDepthFirst(program, [&](const AstSimpleClause& cur) { clauses.push_back(&cur); });
 
     // clean all clauses
-    for (const AstClause* cl : clauses) {
+    for (const AstSimpleClause* cl : clauses) {
         // check for an atom whose relation is the empty relation
 
         bool removed = false;
@@ -604,7 +605,7 @@ bool RemoveEmptyRelationsTransformer::removeEmptyRelationUses(
             if (rewrite) {
                 // clone clause without negation for empty relations
 
-                auto res = std::unique_ptr<AstClause>(cloneHead(cl));
+                auto res = std::unique_ptr<AstSimpleClause>(cloneHead(cl));
 
                 for (AstLiteral* lit : cl->getBodyLiterals()) {
                     if (auto* neg = dynamic_cast<AstNegation*>(lit)) {
@@ -719,7 +720,7 @@ bool RemoveBooleanConstraintsTransformer::transform(AstTranslationUnit& translat
 
     // Remove true and false constant literals from all clauses
     for (AstRelation* rel : program.getRelations()) {
-        for (AstClause* clause : getClauses(program, *rel)) {
+        for (AstSimpleClause* clause : getClauses(program, *rel)) {
             bool containsTrue = false;
             bool containsFalse = false;
 
@@ -733,7 +734,7 @@ bool RemoveBooleanConstraintsTransformer::transform(AstTranslationUnit& translat
                 // Clause will always fail
                 program.removeClause(clause);
             } else if (containsTrue) {
-                auto replacementClause = std::unique_ptr<AstClause>(cloneHead(clause));
+                auto replacementClause = std::unique_ptr<AstSimpleClause>(cloneHead(clause));
 
                 // Only keep non-'true' literals
                 for (AstLiteral* lit : clause->getBodyLiterals()) {
@@ -778,11 +779,11 @@ bool PartitionBodyLiteralsTransformer::transform(AstTranslationUnit& translation
      */
 
     // Store clauses to add and remove after analysing the program
-    std::vector<AstClause*> clausesToAdd;
-    std::vector<const AstClause*> clausesToRemove;
+    std::vector<AstSimpleClause*> clausesToAdd;
+    std::vector<const AstSimpleClause*> clausesToRemove;
 
     // The transformation is local to each rule, so can visit each independently
-    visitDepthFirst(program, [&](const AstClause& clause) {
+    visitDepthFirst(program, [&](const AstSimpleClause& clause) {
         // Create the variable dependency graph G
         Graph<std::string> variableGraph = Graph<std::string>();
         std::set<std::string> ruleVariables;
@@ -878,7 +879,7 @@ bool PartitionBodyLiteralsTransformer::transform(AstTranslationUnit& translation
             newRelation->setQualifiedName(newRelationName);
             program.addRelation(std::move(newRelation));
 
-            auto* disconnectedClause = new AstClause();
+            auto* disconnectedClause = new AstSimpleClause();
             disconnectedClause->setSrcLoc(clause.getSrcLoc());
             disconnectedClause->setHead(std::make_unique<AstAtom>(newRelationName));
 
@@ -905,7 +906,7 @@ bool PartitionBodyLiteralsTransformer::transform(AstTranslationUnit& translation
 
         // Create the replacement clause
         // a(x) <- b(x), c(y), d(z). --> a(x) <- newrel0(), newrel1(), b(x).
-        auto* replacementClause = new AstClause();
+        auto* replacementClause = new AstSimpleClause();
         replacementClause->setSrcLoc(clause.getSrcLoc());
         replacementClause->setHead(std::unique_ptr<AstAtom>(clause.getHead()->clone()));
 
@@ -935,11 +936,11 @@ bool PartitionBodyLiteralsTransformer::transform(AstTranslationUnit& translation
     });
 
     // Adjust the program
-    for (AstClause* newClause : clausesToAdd) {
-        program.addClause(std::unique_ptr<AstClause>(newClause));
+    for (AstSimpleClause* newClause : clausesToAdd) {
+        program.addClause(std::unique_ptr<AstSimpleClause>(newClause));
     }
 
-    for (const AstClause* oldClause : clausesToRemove) {
+    for (const AstSimpleClause* oldClause : clausesToRemove) {
         program.removeClause(oldClause);
     }
 
@@ -981,7 +982,7 @@ bool ReduceExistentialsTransformer::transform(AstTranslationUnit& translationUni
         if (ioType->isIO(relation)) {
             minimalIrreducibleRelations.insert(relation->getQualifiedName());
         }
-        for (AstClause* clause : getClauses(program, *relation)) {
+        for (AstSimpleClause* clause : getClauses(program, *relation)) {
             bool recursive = isRecursiveClause(*clause);
             visitDepthFirst(*clause, [&](const AstAtom& atom) {
                 if (atom.getQualifiedName() == clause->getHead()->getQualifiedName()) {
@@ -1044,9 +1045,9 @@ bool ReduceExistentialsTransformer::transform(AstTranslationUnit& translationUni
         }
 
         // Keep all non-recursive clauses
-        for (AstClause* clause : getClauses(program, *originalRelation)) {
+        for (AstSimpleClause* clause : getClauses(program, *originalRelation)) {
             if (!isRecursiveClause(*clause)) {
-                auto newClause = std::make_unique<AstClause>();
+                auto newClause = std::make_unique<AstSimpleClause>();
 
                 newClause->setSrcLoc(clause->getSrcLoc());
                 if (const AstExecutionPlan* plan = clause->getExecutionPlan()) {
@@ -1072,7 +1073,7 @@ bool ReduceExistentialsTransformer::transform(AstTranslationUnit& translationUni
         renameExistentials(std::set<AstQualifiedName>& relations) : relations(relations) {}
 
         std::unique_ptr<AstNode> operator()(std::unique_ptr<AstNode> node) const override {
-            if (auto* clause = dynamic_cast<AstClause*>(node.get())) {
+            if (auto* clause = dynamic_cast<AstSimpleClause*>(node.get())) {
                 if (relations.find(clause->getHead()->getQualifiedName()) != relations.end()) {
                     // Clause is going to be removed, so don't rename it
                     return node;
@@ -1120,7 +1121,7 @@ bool ReplaceSingletonVariablesTransformer::transform(AstTranslationUnit& transla
     };
 
     for (AstRelation* rel : program.getRelations()) {
-        for (AstClause* clause : getClauses(program, *rel)) {
+        for (AstSimpleClause* clause : getClauses(program, *rel)) {
             std::set<std::string> nonsingletons;
             std::set<std::string> vars;
 
@@ -1190,7 +1191,7 @@ bool NameUnnamedVariablesTransformer::transform(AstTranslationUnit& translationU
 
     AstProgram& program = *translationUnit.getProgram();
     for (AstRelation* rel : program.getRelations()) {
-        for (AstClause* clause : getClauses(program, *rel)) {
+        for (AstSimpleClause* clause : getClauses(program, *rel)) {
             nameVariables update;
             clause->apply(update);
             changed |= update.changed;
@@ -1331,7 +1332,7 @@ bool NormaliseConstraintsTransformer::transform(AstTranslationUnit& translationU
 
     // apply the change to all clauses in the program
     for (AstRelation* rel : program.getRelations()) {
-        for (AstClause* clause : getClauses(program, *rel)) {
+        for (AstSimpleClause* clause : getClauses(program, *rel)) {
             if (isFact(*clause)) {
                 continue;  // don't normalise facts
             }
@@ -1562,7 +1563,7 @@ bool FoldAnonymousRecords::isValidRecordConstraint(const AstLiteral* literal) {
     ;
 }
 
-bool FoldAnonymousRecords::containsValidRecordConstraint(const AstClause& clause) {
+bool FoldAnonymousRecords::containsValidRecordConstraint(const AstSimpleClause& clause) {
     bool contains = false;
     visitDepthFirst(clause, [&](const AstBinaryConstraint& binary) {
         contains = (contains || isValidRecordConstraint(&binary));
@@ -1605,7 +1606,7 @@ std::vector<std::unique_ptr<AstLiteral>> FoldAnonymousRecords::expandRecordBinar
 }
 
 void FoldAnonymousRecords::transformClause(
-        const AstClause& clause, std::vector<std::unique_ptr<AstClause>>& newClauses) {
+        const AstSimpleClause& clause, std::vector<std::unique_ptr<AstSimpleClause>>& newClauses) {
     // If we have an inequality constraint, we need to create new clauses
     // At most one inequality constraint will be expanded in a single pass.
     AstBinaryConstraint* neqConstraint = nullptr;
@@ -1639,7 +1640,7 @@ void FoldAnonymousRecords::transformClause(
 
     // If no inequality: create a single modified clause.
     if (neqConstraint == nullptr) {
-        auto newClause = std::unique_ptr<AstClause>(clause.clone());
+        auto newClause = std::unique_ptr<AstSimpleClause>(clause.clone());
         newClause->setBodyLiterals(std::move(newBody));
         newClauses.emplace_back(std::move(newClause));
 
@@ -1648,7 +1649,7 @@ void FoldAnonymousRecords::transformClause(
         auto transformedLiterals = expandRecordBinaryConstraint(*neqConstraint);
 
         for (auto it = begin(transformedLiterals); it != end(transformedLiterals); ++it) {
-            auto newClause = std::unique_ptr<AstClause>(clause.clone());
+            auto newClause = std::unique_ptr<AstSimpleClause>(clause.clone());
             auto copyBody = clone(newBody);
             copyBody.push_back(std::move(*it));
 
@@ -1663,7 +1664,7 @@ bool FoldAnonymousRecords::transform(AstTranslationUnit& translationUnit) {
     bool changed = false;
     AstProgram& program = *translationUnit.getProgram();
 
-    std::vector<std::unique_ptr<AstClause>> newClauses;
+    std::vector<std::unique_ptr<AstSimpleClause>> newClauses;
 
     for (const auto* clause : program.getClauses()) {
         if (containsValidRecordConstraint(*clause)) {
@@ -1682,7 +1683,7 @@ bool FoldAnonymousRecords::transform(AstTranslationUnit& translationUnit) {
 }
 
 std::map<std::string, const AstRecordInit*> ResolveAnonymousRecordsAliases::findVariablesRecordMapping(
-        AstTranslationUnit& tu, const AstClause& clause) {
+        AstTranslationUnit& tu, const AstSimpleClause& clause) {
     std::map<std::string, const AstRecordInit*> variableRecordMap;
 
     auto isVariable = [](AstNode* node) -> bool { return dynamic_cast<AstVariable*>(node) != nullptr; };
@@ -1736,7 +1737,7 @@ std::map<std::string, const AstRecordInit*> ResolveAnonymousRecordsAliases::find
     return variableRecordMap;
 }
 
-bool ResolveAnonymousRecordsAliases::replaceNamedVariables(AstTranslationUnit& tu, AstClause& clause) {
+bool ResolveAnonymousRecordsAliases::replaceNamedVariables(AstTranslationUnit& tu, AstSimpleClause& clause) {
     struct ReplaceVariables : public AstNodeMapper {
         std::map<std::string, const AstRecordInit*> varToRecordMap;
 
@@ -1766,7 +1767,7 @@ bool ResolveAnonymousRecordsAliases::replaceNamedVariables(AstTranslationUnit& t
     return changed;
 }
 
-bool ResolveAnonymousRecordsAliases::replaceUnnamedVariable(AstClause& clause) {
+bool ResolveAnonymousRecordsAliases::replaceUnnamedVariable(AstSimpleClause& clause) {
     struct ReplaceUnnamed : public AstNodeMapper {
         mutable bool changed{false};
         ReplaceUnnamed() = default;

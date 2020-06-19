@@ -56,9 +56,9 @@ std::vector<const AstRecordInit*> getRecords(const AstNode& root) {
     return recs;
 }
 
-std::vector<AstClause*> getClauses(const AstProgram& program, const AstQualifiedName& relationName) {
-    std::vector<AstClause*> clauses;
-    for (AstClause* clause : program.getClauses()) {
+std::vector<AstSimpleClause*> getClauses(const AstProgram& program, const AstQualifiedName& relationName) {
+    std::vector<AstSimpleClause*> clauses;
+    for (AstSimpleClause* clause : program.getClauses()) {
         if (clause->getHead()->getQualifiedName() == relationName) {
             clauses.push_back(clause);
         }
@@ -66,7 +66,7 @@ std::vector<AstClause*> getClauses(const AstProgram& program, const AstQualified
     return clauses;
 }
 
-std::vector<AstClause*> getClauses(const AstProgram& program, const AstRelation& rel) {
+std::vector<AstSimpleClause*> getClauses(const AstProgram& program, const AstRelation& rel) {
     return getClauses(program, rel.getQualifiedName());
 }
 
@@ -93,11 +93,11 @@ const AstRelation* getAtomRelation(const AstAtom* atom, const AstProgram* progra
     return getRelation(*program, atom->getQualifiedName());
 }
 
-const AstRelation* getHeadRelation(const AstClause* clause, const AstProgram* program) {
+const AstRelation* getHeadRelation(const AstSimpleClause* clause, const AstProgram* program) {
     return getAtomRelation(clause->getHead(), program);
 }
 
-std::set<const AstRelation*> getBodyRelations(const AstClause* clause, const AstProgram* program) {
+std::set<const AstRelation*> getBodyRelations(const AstSimpleClause* clause, const AstProgram* program) {
     std::set<const AstRelation*> bodyRelations;
     for (const auto& lit : clause->getBodyLiterals()) {
         visitDepthFirst(
@@ -110,7 +110,7 @@ std::set<const AstRelation*> getBodyRelations(const AstClause* clause, const Ast
     return bodyRelations;
 }
 
-size_t getClauseNum(const AstProgram* program, const AstClause* clause) {
+size_t getClauseNum(const AstProgram* program, const AstSimpleClause* clause) {
     // TODO (azreika): This number might change between the provenance transformer and the AST->RAM
     // translation. Might need a better way to assign IDs to clauses... (see PR #1288).
     const AstRelation* rel = getRelation(*program, clause->getHead()->getQualifiedName());
@@ -133,7 +133,7 @@ size_t getClauseNum(const AstProgram* program, const AstClause* clause) {
 
 bool hasClauseWithNegatedRelation(const AstRelation* relation, const AstRelation* negRelation,
         const AstProgram* program, const AstLiteral*& foundLiteral) {
-    for (const AstClause* cl : getClauses(*program, *relation)) {
+    for (const AstSimpleClause* cl : getClauses(*program, *relation)) {
         for (const auto* neg : getBodyLiterals<AstNegation>(*cl)) {
             if (negRelation == getAtomRelation(neg->getAtom(), program)) {
                 foundLiteral = neg;
@@ -146,7 +146,7 @@ bool hasClauseWithNegatedRelation(const AstRelation* relation, const AstRelation
 
 bool hasClauseWithAggregatedRelation(const AstRelation* relation, const AstRelation* aggRelation,
         const AstProgram* program, const AstLiteral*& foundLiteral) {
-    for (const AstClause* cl : getClauses(*program, *relation)) {
+    for (const AstSimpleClause* cl : getClauses(*program, *relation)) {
         bool hasAgg = false;
         visitDepthFirst(*cl, [&](const AstAggregator& cur) {
             visitDepthFirst(cur, [&](const AstAtom& atom) {
@@ -163,7 +163,7 @@ bool hasClauseWithAggregatedRelation(const AstRelation* relation, const AstRelat
     return false;
 }
 
-bool isRecursiveClause(const AstClause& clause) {
+bool isRecursiveClause(const AstSimpleClause& clause) {
     AstQualifiedName relationName = clause.getHead()->getQualifiedName();
     bool recursive = false;
     visitDepthFirst(clause.getBodyLiterals(), [&](const AstAtom& atom) {
@@ -174,7 +174,7 @@ bool isRecursiveClause(const AstClause& clause) {
     return recursive;
 }
 
-bool isFact(const AstClause& clause) {
+bool isFact(const AstSimpleClause& clause) {
     // there must be a head
     if (clause.getHead() == nullptr) {
         return false;
@@ -200,12 +200,12 @@ bool isFact(const AstClause& clause) {
     return !hasAggregatesOrMultiResultFunctor;
 }
 
-bool isRule(const AstClause& clause) {
+bool isRule(const AstSimpleClause& clause) {
     return (clause.getHead() != nullptr) && !isFact(clause);
 }
 
-AstClause* cloneHead(const AstClause* clause) {
-    auto* clone = new AstClause();
+AstSimpleClause* cloneHead(const AstSimpleClause* clause) {
+    auto* clone = new AstSimpleClause();
     clone->setSrcLoc(clause->getSrcLoc());
     clone->setHead(std::unique_ptr<AstAtom>(clause->getHead()->clone()));
     if (clause->getExecutionPlan() != nullptr) {
@@ -214,7 +214,7 @@ AstClause* cloneHead(const AstClause* clause) {
     return clone;
 }
 
-AstClause* reorderAtoms(const AstClause* clause, const std::vector<unsigned int>& newOrder) {
+AstSimpleClause* reorderAtoms(const AstSimpleClause* clause, const std::vector<unsigned int>& newOrder) {
     // Find all atom positions
     std::vector<unsigned int> atomPositions;
     std::vector<AstLiteral*> bodyLiterals = clause->getBodyLiterals();
@@ -233,7 +233,7 @@ AstClause* reorderAtoms(const AstClause* clause, const std::vector<unsigned int>
     assert(std::is_permutation(nopOrder.begin(), nopOrder.end(), newOrder.begin()));
 
     // Create a new clause with the given atom order, leaving the rest unchanged
-    AstClause* newClause = cloneHead(clause);
+    AstSimpleClause* newClause = cloneHead(clause);
     unsigned int currentAtom = 0;
     for (unsigned int currentLiteral = 0; currentLiteral < bodyLiterals.size(); currentLiteral++) {
         AstLiteral* literalToAdd = bodyLiterals[currentLiteral];

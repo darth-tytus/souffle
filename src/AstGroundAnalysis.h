@@ -21,7 +21,7 @@
 namespace souffle {
 
 class AstArgument;
-class AstClause;
+class AstSimpleClause;
 class AstTranslationUnit;
 
 /**
@@ -33,6 +33,7 @@ class AstTranslationUnit;
  * @return a map mapping each contained argument to a boolean indicating
  *      whether the argument represents a grounded value or not
  */
-std::map<const AstArgument*, bool> getGroundedTerms(const AstTranslationUnit& tu, const AstClause& clause);
+std::map<const AstArgument*, bool> getGroundedTerms(
+        const AstTranslationUnit& tu, const AstSimpleClause& clause);
 
 }  // end of namespace souffle
