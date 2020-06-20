@@ -42,55 +42,55 @@
 namespace souffle::test {
 class AstRelation;
 
-// TEST(AstUtils, Grounded) {
-//     // create an example clause:
-//     auto clause = std::make_unique<AstSimpleClause>();
+TEST(AstUtils, Grounded) {
+    // create an example clause:
+    auto clause = std::make_unique<AstSimpleClause>();
 
-//     // something like:
-//     //   r(X,Y,Z) :- a(X), X = Y, !b(Z).
+    // something like:
+    //   r(X,Y,Z) :- a(X), X = Y, !b(Z).
 
-//     // r(X,Y,Z)
-//     auto* head = new AstAtom("r");
-//     head->addArgument(std::unique_ptr<AstArgument>(new AstVariable("X")));
-//     head->addArgument(std::unique_ptr<AstArgument>(new AstVariable("Y")));
-//     head->addArgument(std::unique_ptr<AstArgument>(new AstVariable("Z")));
-//     clause->setHead(std::unique_ptr<AstAtom>(head));
+    // r(X,Y,Z)
+    auto* head = new AstAtom("r");
+    head->addArgument(std::unique_ptr<AstArgument>(new AstVariable("X")));
+    head->addArgument(std::unique_ptr<AstArgument>(new AstVariable("Y")));
+    head->addArgument(std::unique_ptr<AstArgument>(new AstVariable("Z")));
+    clause->setHead(std::unique_ptr<AstAtom>(head));
 
-//     // a(X)
-//     auto* a = new AstAtom("a");
-//     a->addArgument(std::unique_ptr<AstArgument>(new AstVariable("X")));
-//     clause->addToBody(std::unique_ptr<AstLiteral>(a));
+    // a(X)
+    auto* a = new AstAtom("a");
+    a->addArgument(std::unique_ptr<AstArgument>(new AstVariable("X")));
+    clause->addToBody(std::unique_ptr<AstLiteral>(a));
 
-//     // X = Y
-//     AstLiteral* e1 = new AstBinaryConstraint(BinaryConstraintOp::EQ,
-//             std::unique_ptr<AstArgument>(new AstVariable("X")),
-//             std::unique_ptr<AstArgument>(new AstVariable("Y")));
-//     clause->addToBody(std::unique_ptr<AstLiteral>(e1));
+    // X = Y
+    AstLiteral* e1 = new AstBinaryConstraint(BinaryConstraintOp::EQ,
+            std::unique_ptr<AstArgument>(new AstVariable("X")),
+            std::unique_ptr<AstArgument>(new AstVariable("Y")));
+    clause->addToBody(std::unique_ptr<AstLiteral>(e1));
 
-//     // !b(Z)
-//     auto* b = new AstAtom("b");
-//     b->addArgument(std::unique_ptr<AstArgument>(new AstVariable("Z")));
-//     auto* neg = new AstNegation(std::unique_ptr<AstAtom>(b));
-//     clause->addToBody(std::unique_ptr<AstLiteral>(neg));
+    // !b(Z)
+    auto* b = new AstAtom("b");
+    b->addArgument(std::unique_ptr<AstArgument>(new AstVariable("Z")));
+    auto* neg = new AstNegation(std::unique_ptr<AstAtom>(b));
+    clause->addToBody(std::unique_ptr<AstLiteral>(neg));
 
-//     // check construction
-//     EXPECT_EQ("r(X,Y,Z) :- \n   a(X),\n   X = Y,\n   !b(Z).", toString(*clause));
+    // check construction
+    EXPECT_EQ("r(X,Y,Z) :- \n   a(X),\n   X = Y,\n   !b(Z).", toString(*clause));
 
-//     auto program = std::make_unique<AstProgram>();
-//     program->addClause(std::move(clause));
-//     DebugReport dbgReport;
-//     ErrorReport errReport;
-//     AstTranslationUnit tu{std::move(program), errReport, dbgReport};
+    auto program = std::make_unique<AstProgram>();
+    program->addClause(std::move(clause));
+    DebugReport dbgReport;
+    ErrorReport errReport;
+    AstTranslationUnit tu{std::move(program), errReport, dbgReport};
 
-//     // obtain groundness
-//     auto isGrounded = getGroundedTerms(tu, *tu.getProgram()->getClauses()[0]);
+    // obtain groundness
+    auto isGrounded = getGroundedTerms(tu, *tu.getProgram()->getClauses()[0]);
 
-//     auto args = head->getArguments();
-//     // check selected sub-terms
-//     EXPECT_TRUE(isGrounded[args[0]]);   // X
-//     EXPECT_TRUE(isGrounded[args[1]]);   // Y
-//     EXPECT_FALSE(isGrounded[args[2]]);  // Z
-// }
+    auto args = head->getArguments();
+    // check selected sub-terms
+    EXPECT_TRUE(isGrounded[args[0]]);   // X
+    EXPECT_TRUE(isGrounded[args[1]]);   // Y
+    EXPECT_FALSE(isGrounded[args[2]]);  // Z
+}
 
 // TEST(AstUtils, GroundedRecords) {
 //     ErrorReport e;

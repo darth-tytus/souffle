@@ -1828,8 +1828,8 @@ bool FoldMultiClauses::transform(AstTranslationUnit& translationUnit) {
 
         for (AstAtom* head : heads) {
             VecOwn<AstLiteral> newBody;
-            for (auto* lit : body) {
-                newBody.push_back(souffle::clone(lit));
+            for (auto* lit : as<AstConjunction>(body)->getArguments()) {
+                newBody.push_back(souffle::clone(as<AstLiteral>(lit)));
             }
             auto* newSimpleClause = new AstSimpleClause(
                     souffle::clone(head), std::move(newBody), souffle::clone(executionPlan), loc);

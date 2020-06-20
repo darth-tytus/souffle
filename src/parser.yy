@@ -41,6 +41,7 @@
     #include "AstFunctorDeclaration.h"
     #include "AstIO.h"
     #include "AstNode.h"
+    #include "AstExpression.h"
     #include "AstParserUtils.h"
     #include "AstPragma.h"
     #include "AstProgram.h"
@@ -491,13 +492,13 @@ rule_def
 
         for (auto&& head : $heads) {
             for (auto&& body : bodies) {
-                VecOwn<AstLiteral> bodyLits;
+                VecOwn<AstExpression> bodyLits;
                 VecOwn<AstAtom> heads;
                 for (auto* lit : body->getBodyLiterals()) {
-                    bodyLits.push_back(Own<AstLiteral>(clone(lit)));
+                    bodyLits.push_back(Own<AstExpression>(clone(lit)));
                 }
                 heads.push_back(clone(head));
-                auto newClause = new AstMultiClause(std::move(heads), std::move(bodyLits), {}, @$);
+                auto newClause = new AstMultiClause(std::move(heads), Own<AstExpression>(new AstConjunction(std::move(bodyLits))), {}, @$);
                 $$.push_back(Own<AstMultiClause>(newClause));
             }
         }

@@ -21,13 +21,24 @@
 namespace souffle {
 
 /**
+ * Expressions.
+ * Conjunctions, disjunction, negation and literals.
+ **/
+class AstExpression : public AstNode {
+public:
+    using AstNode::AstNode;
+
+    AstExpression* clone() const override = 0;
+};
+
+/**
  * Literal
  * e.g. atoms, binary relations, and negated atoms
  * in the body and head of a clause.
  */
-class AstLiteral : public AstNode {
+class AstLiteral : public AstExpression {
 public:
-    using AstNode::AstNode;
+    using AstExpression::AstExpression;
 
     AstLiteral* clone() const override = 0;
 };

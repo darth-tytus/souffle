@@ -141,12 +141,11 @@ protected:
 
 class AstMultiClause : public AstClause {
 public:
-    AstMultiClause(VecOwn<AstAtom> heads, VecOwn<AstLiteral> body, Own<AstExecutionPlan> plan = {},
+    AstMultiClause(VecOwn<AstAtom> heads, Own<AstExpression> body, Own<AstExecutionPlan> plan = {},
             SrcLocation loc = {})
             : AstClause(std::move(loc)), heads(std::move(heads)), body(std::move(body)),
               plan(std::move(plan)) {
         assert(this->heads.size() != 0);
-        assert(this->body.size() != 0);
     };
 
     /** Set the heads of clause to @p h */
@@ -155,7 +154,7 @@ public:
     }
 
     /** Set the body of clause to @p body */
-    void setBody(VecOwn<AstLiteral> newBody) {
+    void setBody(Own<AstExpression> newBody) {
         body = std::move(newBody);
     }
 
@@ -164,8 +163,8 @@ public:
         this->plan = std::move(plan);
     }
 
-    std::vector<AstLiteral*> getBody() const {
-        return toPtrVector(body);
+    AstExpression* getBody() const {
+        return body.get();
     }
 
     std::vector<AstAtom*> getHeads() const override {
@@ -181,9 +180,8 @@ public:
         for (auto& head : heads) {
             head = map(std::move(head));
         }
-        for (auto& lit : body) {
-            lit = map(std::move(lit));
-        }
+
+        body = map(std::move(body));
     }
 
     AstMultiClause* clone() const override {
@@ -198,20 +196,18 @@ public:
             children.push_back(head.get());
         }
 
-        for (auto& lit : body) {
-            children.push_back(lit.get());
-        }
+        children.push_back(body.get());
 
         return children;
     }
 
 protected:
     VecOwn<AstAtom> heads;
-    VecOwn<AstLiteral> body;
+    Own<AstExpression> body;
     Own<AstExecutionPlan> plan;
 
     void print(std::ostream& os) const override {
-        os << tfm::format("%s :- \n   %s.\n", join(heads, ", "), join(body, ",\n   "));
+        os << tfm::format("%s :- %s.\n", join(heads, ", "), *body);
 
         if (plan != nullptr) {
             os << *plan;
@@ -220,7 +216,7 @@ protected:
 
     bool equal(const AstNode& node) const override {
         const auto& other = static_cast<const AstMultiClause&>(node);
-        return equal_targets(heads, other.heads) && equal_targets(body, other.body) &&
+        return equal_targets(heads, other.heads) && equal_ptr(body, other.body) &&
                equal_ptr(plan, other.plan);
     }
 };

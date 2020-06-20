@@ -18,6 +18,7 @@
 #pragma once
 
 #include "AstAbstract.h"
+#include "AstExpression.h"
 #include "AstNode.h"
 #include "AstQualifiedName.h"
 #include "BinaryConstraintOps.h"
