@@ -130,11 +130,21 @@ private:
     std::map<int, Own<AstExecutionOrder>> plans;
 };
 
-class AstMultiClause : public AstNode {
+class AstClause : public AstNode {
+public:
+    virtual std::vector<AstAtom*> getHeads() const = 0;
+    virtual AstClause* clone() const = 0;
+
+protected:
+    AstClause(SrcLocation loc) : AstNode(std::move(loc)){};
+};
+
+class AstMultiClause : public AstClause {
 public:
     AstMultiClause(VecOwn<AstAtom> heads, VecOwn<AstLiteral> body, Own<AstExecutionPlan> plan = {},
             SrcLocation loc = {})
-            : AstNode(std::move(loc)), heads(std::move(heads)), body(std::move(body)), plan(std::move(plan)) {
+            : AstClause(std::move(loc)), heads(std::move(heads)), body(std::move(body)),
+              plan(std::move(plan)) {
         assert(this->heads.size() != 0);
         assert(this->body.size() != 0);
     };
@@ -158,7 +168,7 @@ public:
         return toPtrVector(body);
     }
 
-    std::vector<AstAtom*> getHeads() const {
+    std::vector<AstAtom*> getHeads() const override {
         return toPtrVector(heads);
     }
 
@@ -224,11 +234,11 @@ protected:
  *
  * TODO (azreika): make clause abstract and split into two subclasses: Rule and Fact
  */
-class AstSimpleClause : public AstNode {
+class AstSimpleClause : public AstClause {
 public:
     AstSimpleClause(Own<AstAtom> head = {}, VecOwn<AstLiteral> bodyLiterals = {},
             Own<AstExecutionPlan> plan = {}, SrcLocation loc = {})
-            : AstNode(std::move(loc)), head(std::move(head)), bodyLiterals(std::move(bodyLiterals)),
+            : AstClause(std::move(loc)), head(std::move(head)), bodyLiterals(std::move(bodyLiterals)),
               plan(std::move(plan)) {}
 
     /** Add a Literal to the body of the clause */
@@ -249,6 +259,10 @@ public:
     /** Return the atom that represents the head of the clause */
     AstAtom* getHead() const {
         return head.get();
+    }
+
+    std::vector<AstAtom*> getHeads() const override {
+        return {head.get()};
     }
 
     /** Obtains a copy of the internally maintained body literals */

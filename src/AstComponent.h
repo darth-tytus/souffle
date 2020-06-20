@@ -201,16 +201,20 @@ public:
         return toPtrVector(relations);
     }
 
+    void addClause(Own<AstClause> c) {
+        clauses.push_back(std::move(c));
+    }
+
     void addClause(Own<AstSimpleClause> c) {
         clauses.push_back(std::move(c));
     }
 
-    void addMultiClause(Own<AstMultiClause> c) {
-        multiClauses.push_back(std::move(c));
+    void addClause(Own<AstMultiClause> c) {
+        clauses.push_back(std::move(c));
     }
 
     /** get clauses */
-    std::vector<AstSimpleClause*> getClauses() const {
+    std::vector<AstClause*> getClauses() const {
         return toPtrVector(clauses);
     }
 
@@ -387,10 +391,7 @@ protected:
     VecOwn<AstRelation> relations;
 
     /** clauses */
-    VecOwn<AstSimpleClause> clauses;
-
-    /** clauses */
-    VecOwn<AstMultiClause> multiClauses;
+    VecOwn<AstClause> clauses;
 
     /** I/O directives */
     VecOwn<AstIO> ios;

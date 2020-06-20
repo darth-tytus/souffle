@@ -53,7 +53,7 @@ struct ComponentContent {
     std::vector<std::unique_ptr<AstType>> types;
     std::vector<std::unique_ptr<AstRelation>> relations;
     std::vector<std::unique_ptr<AstIO>> ios;
-    std::vector<std::unique_ptr<AstSimpleClause>> clauses;
+    std::vector<std::unique_ptr<AstClause>> clauses;
 
     void add(std::unique_ptr<AstType>& type, ErrorReport& report) {
         // add to result content (check existence first)
@@ -87,7 +87,7 @@ struct ComponentContent {
         relations.push_back(std::move(rel));
     }
 
-    void add(std::unique_ptr<AstSimpleClause>& clause, ErrorReport& /* report */) {
+    void add(std::unique_ptr<AstClause>& clause, ErrorReport& /* report */) {
         clauses.push_back(std::move(clause));
     }
 
@@ -118,7 +118,7 @@ struct ComponentContent {
  */
 ComponentContent getInstantiatedContent(AstProgram& program, const AstComponentInit& componentInit,
         const AstComponent* enclosingComponent, const ComponentLookup& componentLookup,
-        std::vector<std::unique_ptr<AstSimpleClause>>& orphans, ErrorReport& report,
+        std::vector<std::unique_ptr<AstClause>>& orphans, ErrorReport& report,
         const TypeBinding& binding = TypeBinding(), unsigned int maxDepth = MAX_INSTANTIATION_DEPTH);
 
 /**
@@ -126,8 +126,8 @@ ComponentContent getInstantiatedContent(AstProgram& program, const AstComponentI
  */
 void collectContent(AstProgram& program, const AstComponent& component, const TypeBinding& binding,
         const AstComponent* enclosingComponent, const ComponentLookup& componentLookup, ComponentContent& res,
-        std::vector<std::unique_ptr<AstSimpleClause>>& orphans, const std::set<std::string>& overridden,
-        ErrorReport& report, unsigned int maxInstantiationDepth) {
+        VecOwn<AstClause>& orphans, const std::set<std::string>& overridden, ErrorReport& report,
+        unsigned int maxInstantiationDepth) {
     // start with relations and clauses of the base components
     for (const auto& base : component.getBaseComponents()) {
         const AstComponent* comp = componentLookup.getComponent(enclosingComponent, base->getName(), binding);
@@ -236,37 +236,41 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
 
     // add the local clauses
     // TODO: check orphans
-    for (const auto& cur : component.getClauses()) {
-        if (overridden.count(cur->getHead()->getQualifiedName().getQualifiers()[0]) == 0) {
-            AstRelation* rel = index[cur->getHead()->getQualifiedName()];
-            if (rel != nullptr) {
-                std::unique_ptr<AstSimpleClause> instantiatedClause(cur->clone());
+    // TODO: handle multi-clauses correctly here
+    for (const auto* clause : component.getClauses()) {
+        bool overriden = all_of(clause->getHeads(), [&](AstAtom* head) {
+            return overridden.count(head->getQualifiedName().getQualifiers()[0]) == 0;
+        });
+        if (overriden) {
+            bool canBeAdded = all_of(clause->getHeads(),
+                    [&](AstAtom* head) { return index[head->getQualifiedName()] != nullptr; });
+            if (canBeAdded) {
+                std::unique_ptr<AstClause> instantiatedClause(as<AstClause>(clause->clone()));
                 res.add(instantiatedClause, report);
             } else {
-                orphans.emplace_back(cur->clone());
+                orphans.emplace_back(as<AstClause>(clause->clone()));
             }
         }
     }
 
     // add orphan clauses at the current level if they can be resolved
-    for (auto iter = orphans.begin(); iter != orphans.end();) {
-        auto& cur = *iter;
-        AstRelation* rel = index[cur->getHead()->getQualifiedName()];
-        if (rel != nullptr) {
-            // add orphan to current instance and delete from orphan list
-            std::unique_ptr<AstSimpleClause> instantiatedClause(cur->clone());
-            res.add(instantiatedClause, report);
-            iter = orphans.erase(iter);
+    VecOwn<AstClause> newOrphans;
+    for (auto& orphan : orphans) {
+        bool canBeAdded = all_of(orphan->getHeads(),
+                [&](AstAtom* head) { return index[head->getQualifiedName()] != nullptr; });
+        if (canBeAdded) {
+            res.add(orphan, report);
         } else {
-            ++iter;
+            newOrphans.push_back(std::move(orphan));
         }
     }
+    orphans.swap(newOrphans);
 }
 
 ComponentContent getInstantiatedContent(AstProgram& program, const AstComponentInit& componentInit,
         const AstComponent* enclosingComponent, const ComponentLookup& componentLookup,
-        std::vector<std::unique_ptr<AstSimpleClause>>& orphans, ErrorReport& report,
-        const TypeBinding& binding, unsigned int maxDepth) {
+        std::vector<std::unique_ptr<AstClause>>& orphans, ErrorReport& report, const TypeBinding& binding,
+        unsigned int maxDepth) {
     // start with an empty list
     ComponentContent res;
 
@@ -432,7 +436,7 @@ bool ComponentInstantiationTransformer::transform(AstTranslationUnit& translatio
     auto* componentLookup = translationUnit.getAnalysis<ComponentLookup>();
 
     for (const auto& cur : program.instantiations) {
-        std::vector<std::unique_ptr<AstSimpleClause>> orphans;
+        std::vector<std::unique_ptr<AstClause>> orphans;
 
         ComponentContent content = getInstantiatedContent(
                 program, *cur, nullptr, *componentLookup, orphans, translationUnit.getErrorReport());
@@ -443,10 +447,22 @@ bool ComponentInstantiationTransformer::transform(AstTranslationUnit& translatio
             program.relations.push_back(std::move(rel));
         }
         for (auto& clause : content.clauses) {
-            program.clauses.push_back(std::move(clause));
+            if (isA<AstSimpleClause>(clause.get())) {
+                program.addClause(Own<AstSimpleClause>(as<AstSimpleClause>(clause.release())));
+            } else if (isA<AstMultiClause>(clause.get())) {
+                program.addMultiClause(Own<AstMultiClause>(as<AstMultiClause>(clause.release())));
+            } else {
+                fatal("Unknown kind of clause");
+            }
         }
-        for (auto& orphan : orphans) {
-            program.clauses.push_back(std::move(orphan));
+        for (auto& clause : orphans) {
+            if (isA<AstSimpleClause>(clause.get())) {
+                program.addClause(Own<AstSimpleClause>(as<AstSimpleClause>(clause.release())));
+            } else if (isA<AstMultiClause>(clause.get())) {
+                program.addMultiClause(Own<AstMultiClause>(as<AstMultiClause>(clause.release())));
+            } else {
+                fatal("Unknown kind of clause");
+            }
         }
         for (auto& io : content.ios) {
             program.ios.push_back(std::move(io));

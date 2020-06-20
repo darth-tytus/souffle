@@ -757,7 +757,7 @@ type_param_list
 component_body
   : %empty                        { $$ = mk<AstComponent>(); }
   | component_body io_head        { $$ = $1; for (auto&& x : $2) $$->addIO    (std::move(x)); }
-  | component_body rule           { $$ = $1; for (auto&& x : $2) $$->addMultiClause(std::move(x)); }
+  | component_body rule           { $$ = $1; for (auto&& x : $2) $$->addClause(std::move(x)); }
   | component_body fact           { $$ = $1; $$->addClause       ($2); }
   | component_body OVERRIDE IDENT { $$ = $1; $$->addOverride     ($3); }
   | component_body comp_init      { $$ = $1; $$->addInstantiation($2); }
