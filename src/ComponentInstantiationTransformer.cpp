@@ -67,6 +67,7 @@ struct ComponentContent {
                             "Redefinition of type " + toString(type->getQualifiedName()), type->getSrcLoc()),
                     {DiagnosticMessage("Previous definition", (*foundItem)->getSrcLoc())});
             report.addDiagnostic(err);
+            return;
         }
         types.push_back(std::move(type));
     }
@@ -83,6 +84,7 @@ struct ComponentContent {
                             rel->getSrcLoc()),
                     {DiagnosticMessage("Previous definition", (*foundItem)->getSrcLoc())});
             report.addDiagnostic(err);
+            return;
         }
         relations.push_back(std::move(rel));
     }
@@ -106,6 +108,7 @@ struct ComponentContent {
                         {DiagnosticMessage("Previous definition", (*foundItem)->getSrcLoc())});
                 report.addDiagnostic(err);
             }
+            return;
         }
         // if not, add it
         ios.push_back(std::move(newIO));
@@ -179,25 +182,23 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
         // create a clone
         std::unique_ptr<AstType> type(cur->clone());
 
-        // instantiate elements of union types
-        visitDepthFirst(*type, [&](const AstUnionType& type) {
-            for (const auto& name : type.getTypes()) {
-                AstQualifiedName newName = binding.find(name);
+        // instantiate elements of aggregated types
+        // TODO (darth_tytus): Should subset types also be handled here?
+        if (auto* unionType = as<AstUnionType>(type)) {
+            for (const auto& name : unionType.getTypes()) {
+                auto newName = binding.find(name);
                 if (!newName.empty()) {
-                    const_cast<AstQualifiedName&>(name) = newName;
+                    name = newName;
                 }
             }
-        });
-
-        // instantiate elements of record types
-        visitDepthFirst(*type, [&](const AstRecordType& type) {
-            for (const auto& field : type.getFields()) {
-                auto&& newName = binding.find(field->getTypeName());
+        } else if (auto* recordType = as<AstRecordType>(type)) {
+            for (const auto& name : recordType.getFields()) {
+                auto newName = binding.find(name);
                 if (!newName.empty()) {
-                    const_cast<AstAttribute&>(*field).setTypeName(newName);
+                    name = newName;
                 }
             }
-        });
+        }
 
         // add to result list (check existence first)
         res.add(type, report);
@@ -425,37 +426,34 @@ ComponentContent getInstantiatedContent(AstProgram& program, const AstComponentI
 }  // namespace
 
 bool ComponentInstantiationTransformer::transform(AstTranslationUnit& translationUnit) {
-    // TODO: Do this without being a friend class of AstProgram
-
     AstProgram& program = *translationUnit.getProgram();
 
     auto* componentLookup = translationUnit.getAnalysis<ComponentLookup>();
 
-    for (const auto& cur : program.instantiations) {
+    for (const auto* cur : program.getComponentInstantiations()) {
         std::vector<std::unique_ptr<AstClause>> orphans;
 
         ComponentContent content = getInstantiatedContent(
                 program, *cur, nullptr, *componentLookup, orphans, translationUnit.getErrorReport());
         for (auto& type : content.types) {
-            program.types.push_back(std::move(type));
+            program.addType(std::move(type));
         }
         for (auto& rel : content.relations) {
-            program.relations.push_back(std::move(rel));
+            program.addRelation(std::move(rel));
         }
         for (auto& clause : content.clauses) {
-            program.clauses.push_back(std::move(clause));
+            program.addClause(std::move(clause));
         }
         for (auto& orphan : orphans) {
-            program.clauses.push_back(std::move(orphan));
+            program.addClause(std::move(orphan));
         }
         for (auto& io : content.ios) {
-            program.ios.push_back(std::move(io));
+            program.addIO(std::move(io));
         }
     }
 
-    // delete components and instantiations
-    program.instantiations.clear();
-    program.components.clear();
+    // delete components and instantiations.
+    program.cleanComponentInformation();
 
     return true;
 }

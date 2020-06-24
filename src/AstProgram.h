@@ -105,6 +105,18 @@ public:
         clauses.push_back(std::move(clause));
     }
 
+    /* add type */
+    void addType(Own<AstType> type) {
+        assert(getType(*this, type->getQualifiedName()) == nullptr && "Redefinition of type!");
+        types.push_back(std::move(type));
+    }
+
+    /** add IO directive */
+    void addIO(Own<AstIO> directive) {
+        assert(directive && "NULL IO directive");
+        ios.push_back(std::move(directive));
+    }
+
     /** remove a clause */
     bool removeClause(const AstClause* clause) {
         for (auto it = clauses.begin(); it != clauses.end(); it++) {
@@ -124,6 +136,33 @@ public:
     /** get component instantiation */
     std::vector<AstComponentInit*> getComponentInstantiations() const {
         return toPtrVector(instantiations);
+    }
+
+    void cleanComponentInformation() {
+        instantiations.clear();
+        components.clear();
+    }
+
+    /** add a pragma */
+    void addPragma(Own<AstPragma> pragma) {
+        assert(pragma && "NULL IO directive");
+        pragmaDirectives.push_back(std::move(pragma));
+    }
+
+    /** add functor */
+    void addFunctorDeclaration(Own<souffle::AstFunctorDeclaration> f) {
+        assert(getFunctorDeclaration(*this, f->getName()) == nullptr && "Redefinition of functor!");
+        functors.push_back(std::move(f));
+    }
+
+    /** add component */
+    void addComponent(Own<AstComponent> c) {
+        components.push_back(std::move(c));
+    }
+
+    /** add component instantiation */
+    void addInstantiation(Own<AstComponentInit> i) {
+        instantiations.push_back(std::move(i));
     }
 
     AstProgram* clone() const override {
@@ -240,44 +279,7 @@ protected:
         return true;
     }
 
-protected:
-    friend class ComponentInstantiationTransformer;
-    friend class ParserDriver;
-
-    /* add type */
-    void addType(Own<AstType> type) {
-        assert(getType(*this, type->getQualifiedName()) == nullptr && "Redefinition of type!");
-        types.push_back(std::move(type));
-    }
-
-    /** add IO directive */
-    void addIO(Own<AstIO> directive) {
-        assert(directive && "NULL IO directive");
-        ios.push_back(std::move(directive));
-    }
-
-    /** add a pragma */
-    void addPragma(Own<AstPragma> pragma) {
-        assert(pragma && "NULL IO directive");
-        pragmaDirectives.push_back(std::move(pragma));
-    }
-
-    /** add functor */
-    void addFunctorDeclaration(Own<souffle::AstFunctorDeclaration> f) {
-        assert(getFunctorDeclaration(*this, f->getName()) == nullptr && "Redefinition of functor!");
-        functors.push_back(std::move(f));
-    }
-
-    /** add component */
-    void addComponent(Own<AstComponent> c) {
-        components.push_back(std::move(c));
-    }
-
-    /** add component instantiation */
-    void addInstantiation(Own<AstComponentInit> i) {
-        instantiations.push_back(std::move(i));
-    }
-
+private:
     /** Program types  */
     VecOwn<AstType> types;
 
