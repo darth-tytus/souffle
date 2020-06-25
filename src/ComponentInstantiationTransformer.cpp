@@ -55,7 +55,7 @@ struct ComponentContent {
     std::vector<std::unique_ptr<AstIO>> ios;
     std::vector<std::unique_ptr<AstClause>> clauses;
 
-    void add(std::unique_ptr<AstType>& type, ErrorReport& report) {
+    void add(std::unique_ptr<AstType> type, ErrorReport& report) {
         // add to result content (check existence first)
         auto foundItem =
                 std::find_if(types.begin(), types.end(), [&](const std::unique_ptr<AstType>& element) {
@@ -72,7 +72,7 @@ struct ComponentContent {
         types.push_back(std::move(type));
     }
 
-    void add(std::unique_ptr<AstRelation>& rel, ErrorReport& report) {
+    void add(std::unique_ptr<AstRelation> rel, ErrorReport& report) {
         // add to result content (check existence first)
         auto foundItem = std::find_if(
                 relations.begin(), relations.end(), [&](const std::unique_ptr<AstRelation>& element) {
@@ -89,11 +89,11 @@ struct ComponentContent {
         relations.push_back(std::move(rel));
     }
 
-    void add(std::unique_ptr<AstClause>& clause, ErrorReport& /* report */) {
+    void add(std::unique_ptr<AstClause> clause, ErrorReport& /* report */) {
         clauses.push_back(std::move(clause));
     }
 
-    void add(std::unique_ptr<AstIO>& newIO, ErrorReport& report) {
+    void add(std::unique_ptr<AstIO> newIO, ErrorReport& report) {
         // Check if i/o directive already exists
         auto foundItem = std::find_if(ios.begin(), ios.end(), [&](const std::unique_ptr<AstIO>& io) {
             return io->getQualifiedName() == newIO->getQualifiedName();
@@ -149,22 +149,22 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
 
                 // process types
                 for (auto& type : content.types) {
-                    res.add(type, report);
+                    res.add(std::move(type), report);
                 }
 
                 // process relations
                 for (auto& rel : content.relations) {
-                    res.add(rel, report);
+                    res.add(std::move(rel), report);
                 }
 
                 // process clauses
                 for (auto& clause : content.clauses) {
-                    res.add(clause, report);
+                    res.add(std::move(clause), report);
                 }
 
                 // process io directives
                 for (auto& io : content.ios) {
-                    res.add(io, report);
+                    res.add(std::move(io), report);
                 }
             }
 
@@ -185,23 +185,23 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
         // instantiate elements of aggregated types
         // TODO (darth_tytus): Should subset types also be handled here?
         if (auto* unionType = as<AstUnionType>(type)) {
-            for (const auto& name : unionType.getTypes()) {
-                auto newName = binding.find(name);
+            for (const auto& name : unionType->getTypes()) {
+                AstQualifiedName newName = binding.find(name);
                 if (!newName.empty()) {
-                    name = newName;
+                    const_cast<AstQualifiedName&>(name) = newName;
                 }
             }
         } else if (auto* recordType = as<AstRecordType>(type)) {
-            for (const auto& name : recordType.getFields()) {
-                auto newName = binding.find(name);
+            for (auto* field : recordType->getFields()) {
+                auto newName = binding.find(field->getTypeName());
                 if (!newName.empty()) {
-                    name = newName;
+                    field->setTypeName(newName);
                 }
             }
         }
 
         // add to result list (check existence first)
-        res.add(type, report);
+        res.add(std::move(type), report);
     }
 
     // and the local relations
@@ -218,7 +218,7 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
         }
 
         // add to result list (check existence first)
-        res.add(rel, report);
+        res.add(std::move(rel), report);
     }
 
     // and the local io directives
@@ -226,7 +226,7 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
         // create a clone
         std::unique_ptr<AstIO> instantiatedIO(io->clone());
 
-        res.add(instantiatedIO, report);
+        res.add(std::move(instantiatedIO), report);
     }
 
     // index the available relations
@@ -242,7 +242,7 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
             AstRelation* rel = index[cur->getHead()->getQualifiedName()];
             if (rel != nullptr) {
                 std::unique_ptr<AstClause> instantiatedClause(cur->clone());
-                res.add(instantiatedClause, report);
+                res.add(std::move(instantiatedClause), report);
             } else {
                 orphans.emplace_back(cur->clone());
             }
@@ -256,7 +256,7 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
         if (rel != nullptr) {
             // add orphan to current instance and delete from orphan list
             std::unique_ptr<AstClause> instantiatedClause(cur->clone());
-            res.add(instantiatedClause, report);
+            res.add(std::move(instantiatedClause), report);
             iter = orphans.erase(iter);
         } else {
             ++iter;
@@ -297,22 +297,22 @@ ComponentContent getInstantiatedContent(AstProgram& program, const AstComponentI
 
         // add types
         for (auto& type : nestedContent.types) {
-            res.add(type, report);
+            res.add(std::move(type), report);
         }
 
         // add relations
         for (auto& rel : nestedContent.relations) {
-            res.add(rel, report);
+            res.add(std::move(rel), report);
         }
 
         // add clauses
         for (auto& clause : nestedContent.clauses) {
-            res.add(clause, report);
+            res.add(std::move(clause), report);
         }
 
         // add IO directives
         for (auto& io : nestedContent.ios) {
-            res.add(io, report);
+            res.add(std::move(io), report);
         }
     }
 
@@ -430,6 +430,8 @@ bool ComponentInstantiationTransformer::transform(AstTranslationUnit& translatio
 
     auto* componentLookup = translationUnit.getAnalysis<ComponentLookup>();
 
+    bool changed = false;
+
     for (const auto* cur : program.getComponentInstantiations()) {
         std::vector<std::unique_ptr<AstClause>> orphans;
 
@@ -450,12 +452,14 @@ bool ComponentInstantiationTransformer::transform(AstTranslationUnit& translatio
         for (auto& io : content.ios) {
             program.addIO(std::move(io));
         }
+
+        changed = true;
     }
 
     // delete components and instantiations.
     program.cleanComponentInformation();
 
-    return true;
+    return changed;
 }
 
 }  // end namespace souffle
