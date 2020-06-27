@@ -134,6 +134,51 @@ private:
     std::vector<AstQualifiedName> types;
 };
 
+class AstSumType : public AstType {
+public:
+    struct Branch {
+        std::string name;
+        AstQualifiedName type;
+
+        bool operator==(const Branch& other) const {
+            return this == &other || (name == other.name && type == other.type);
+        }
+
+        friend std::ostream& operator<<(std::ostream& os, const Branch& br) {
+            return os << br.name << " " << br.type;
+        }
+    };
+
+    AstSumType(AstQualifiedName name, std::vector<Branch> bs, SrcLocation loc = {})
+            : AstType(std::move(name), std::move(loc)), branches(std::move(bs)) {
+        assert(!branches.empty());
+    };
+
+    /** Obtains a reference to the list element types */
+    const std::vector<Branch>& getBranches() const {
+        return branches;
+    }
+
+    void print(std::ostream& os) const override {
+        os << tfm::format(".type %s = %s", getQualifiedName(), join(branches, " ; "));
+    }
+
+    AstSumType* clone() const override {
+        return new AstSumType(getQualifiedName(), branches, getSrcLoc());
+    }
+
+protected:
+    bool equal(const AstNode& node) const override {
+        assert(nullptr != dynamic_cast<const AstSumType*>(&node));
+        const auto& other = static_cast<const AstSumType&>(node);
+        return getQualifiedName() == other.getQualifiedName() && branches == other.branches;
+    }
+
+private:
+    /** The list of branches for this sum type. */
+    const std::vector<Branch> branches;
+};
+
 /**
  * A record type aggregates a list of fields into a new type.
  * Each record type has a name making it unique. Two record
