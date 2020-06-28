@@ -1,0 +1,16 @@
+Error: Branch X is defined multiple times, in the definition of type A in file type_system_sum_types1.dl at line 17
+  = X : number
+--------^------
+Error: Branch Y is defined multiple times, in the definition of type A in file type_system_sum_types1.dl at line 18
+  ; Y : float
+--------^-----
+Error: Branch X is defined multiple times, in the definition of type A in file type_system_sum_types1.dl at line 19
+  ; X : number
+--------^------
+Error: Branch Y is defined multiple times, in the definition of type A in file type_system_sum_types1.dl at line 20
+  ; Y : float
+--------^-----
+Error: Undefined type definitlyNotAType in definition of branch X in file type_system_sum_types1.dl at line 25
+.type B = X : definitlyNotAType
+--------------^-----------------
+5 errors generated, evaluation aborted

@@ -182,6 +182,25 @@ protected:
             : Type(environment, name), fields(fields) {}
 };
 
+class SumType : public Type {
+public:
+    struct Branch {
+        std::string name;  // < the name of the branch
+        const Type& type;  // < the refined type of the branch
+    };
+
+    void setBranches(std::vector<Branch> bs) {
+        branches = std::move(bs);
+    }
+
+private:
+    SumType(const TypeEnvironment& env, AstQualifiedName name) : Type(env, std::move(name)) {}
+
+    friend class TypeEnvironment;
+
+    std::vector<Branch> branches;
+};
+
 /**
  * Type representing a subset type derived from the record type.
  */

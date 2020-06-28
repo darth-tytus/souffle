@@ -142,7 +142,7 @@ public:
     };
 
     /** Obtains a reference to the list element types */
-    std::vector<AstAttribute*> getBranches() {
+    std::vector<AstAttribute*> getBranches() const {
         return toPtrVector(branches);
     }
 

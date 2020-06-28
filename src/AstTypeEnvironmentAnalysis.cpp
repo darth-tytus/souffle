@@ -44,6 +44,8 @@ Graph<AstQualifiedName> createTypeDependencyGraph(const std::vector<AstType*>& p
             for (const auto& subtype : type->getTypes()) {
                 typeDependencyGraph.insert(type->getQualifiedName(), subtype);
             }
+        } else if (auto* type = as<AstSumType>(astType)) {
+            // do nothing
         } else {
             fatal("unsupported type construct: %s", typeid(astType).name());
         }
@@ -129,6 +131,7 @@ void TypeEnvironmentAnalysis::run(const AstTranslationUnit& translationUnit) {
     }
 }
 
+// TODO (darth_tytus): this procedure does to much.
 const Type* TypeEnvironmentAnalysis::createType(
         const AstQualifiedName& typeName, const std::map<AstQualifiedName, const AstType*>& nameToAstType) {
     // base case
@@ -198,6 +201,20 @@ const Type* TypeEnvironmentAnalysis::createType(
 
         return &recordType;
 
+    } else if (isA<AstSumType>(astType)) {
+        auto& sumType = env.createType<SumType>(typeName);
+
+        std::vector<SumType::Branch> elements;
+        for (auto* branch : as<AstSumType>(astType)->getBranches()) {
+            auto* branchType = createType(branch->getTypeName(), nameToAstType);
+            if (branchType == nullptr) {
+                return nullptr;
+            }
+            elements.push_back({branch->getName(), *branchType});
+        }
+        sumType.setBranches(std::move(elements));
+
+        return &sumType;
     } else {
         fatal("unsupported type construct: %s", typeid(*astType).name());
     }

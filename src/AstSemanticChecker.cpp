@@ -96,6 +96,7 @@ private:
     void checkRecordType(const AstRecordType& type);
     void checkSubsetType(const AstSubsetType& type);
     void checkUnionType(const AstUnionType& type);
+    void checkSumType(const AstSumType& type);
 
     void checkNamespaces();
     void checkIO();
@@ -651,6 +652,38 @@ void AstSemanticCheckerImpl::checkUnionType(const AstUnionType& type) {
     }
 }
 
+void AstSemanticCheckerImpl::checkSumType(const AstSumType& type) {
+    // check proper definition of all branch types
+    for (auto* branch : type.getBranches()) {
+        if (!typeEnv.isType(branch->getTypeName())) {
+            report.addError(tfm::format("Undefined type %s in definition of branch %s", branch->getTypeName(),
+                                    branch->getName()),
+                    branch->getSrcLoc());
+        }
+    }
+
+    // Check if all the branch names are unique.
+    std::map<std::string, std::vector<SrcLocation>> branchToLocation;
+    for (auto* branch : type.getBranches()) {
+        branchToLocation[branch->getName()].push_back(branch->getSrcLoc());
+    }
+
+    for (auto& branchLocationsPair : branchToLocation) {
+        auto&& branchName = branchLocationsPair.first;
+        auto&& srcLocs = branchLocationsPair.second;
+
+        if (srcLocs.size() == 1) {
+            continue;  // All good
+        }
+
+        for (auto& loc : srcLocs) {
+            report.addError(tfm::format("Branch %s is defined multiple times, in the definition of type %s",
+                                    branchName, type.getQualifiedName()),
+                    loc);
+        }
+    }
+}
+
 void AstSemanticCheckerImpl::checkRecordType(const AstRecordType& type) {
     auto&& fields = type.getFields();
     // check proper definition of all field types
@@ -705,12 +738,14 @@ void AstSemanticCheckerImpl::checkType(const AstType& type) {
         return;
     }
 
-    if (isA<AstUnionType>(type)) {
-        checkUnionType(*as<AstUnionType>(type));
-    } else if (isA<AstRecordType>(type)) {
-        checkRecordType(*as<AstRecordType>(type));
-    } else if (isA<AstSubsetType>(type)) {
-        checkSubsetType(*as<AstSubsetType>(type));
+    if (auto t = as<AstUnionType>(type)) {
+        checkUnionType(*t);
+    } else if (auto t = as<AstRecordType>(type)) {
+        checkRecordType(*t);
+    } else if (auto t = as<AstSubsetType>(type)) {
+        checkSubsetType(*t);
+    } else if (auto t = as<AstSumType>(type)) {
+        checkSumType(*t);
     } else {
         fatal("unsupported type construct: %s", typeid(type).name());
     }
