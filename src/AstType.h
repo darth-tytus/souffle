@@ -136,27 +136,14 @@ private:
 
 class AstSumType : public AstType {
 public:
-    struct Branch {
-        std::string name;
-        AstQualifiedName type;
-
-        bool operator==(const Branch& other) const {
-            return this == &other || (name == other.name && type == other.type);
-        }
-
-        friend std::ostream& operator<<(std::ostream& os, const Branch& br) {
-            return os << br.name << " " << br.type;
-        }
-    };
-
-    AstSumType(AstQualifiedName name, std::vector<Branch> bs, SrcLocation loc = {})
+    AstSumType(AstQualifiedName name, VecOwn<AstAttribute> bs, SrcLocation loc = {})
             : AstType(std::move(name), std::move(loc)), branches(std::move(bs)) {
         assert(!branches.empty());
     };
 
     /** Obtains a reference to the list element types */
-    const std::vector<Branch>& getBranches() const {
-        return branches;
+    std::vector<AstAttribute*> getBranches() {
+        return toPtrVector(branches);
     }
 
     void print(std::ostream& os) const override {
@@ -164,19 +151,18 @@ public:
     }
 
     AstSumType* clone() const override {
-        return new AstSumType(getQualifiedName(), branches, getSrcLoc());
+        return new AstSumType(getQualifiedName(), souffle::clone(branches), getSrcLoc());
     }
 
 protected:
     bool equal(const AstNode& node) const override {
-        assert(nullptr != dynamic_cast<const AstSumType*>(&node));
-        const auto& other = static_cast<const AstSumType&>(node);
-        return getQualifiedName() == other.getQualifiedName() && branches == other.branches;
+        const auto& other = dynamic_cast<const AstSumType&>(node);
+        return getQualifiedName() == other.getQualifiedName() && equal_targets(branches, other.branches);
     }
 
 private:
     /** The list of branches for this sum type. */
-    const std::vector<Branch> branches;
+    VecOwn<AstAttribute> branches;
 };
 
 /**
