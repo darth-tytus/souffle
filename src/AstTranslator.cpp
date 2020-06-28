@@ -1730,22 +1730,21 @@ const Json AstTranslator::getRecordsTypes() {
     std::map<std::string, Json> records;
 
     // Iterate over all record types in the program populating the records map.
-    for (auto* astType : program->getTypes()) {
-        const auto& type = typeEnv->getType(astType->getQualifiedName());
-        if (isA<RecordType>(type)) {
-            elementTypes.clear();
+    visitDepthFirst(program->getTypes(), [&](const AstRecordType& astType) {
+        const auto& type = typeEnv->getType(astType.getQualifiedName());
+        elementTypes.clear();
 
-            for (const Type* field : as<RecordType>(type)->getFields()) {
-                elementTypes.push_back(getTypeQualifier(*field));
-            }
-            const size_t recordArity = elementTypes.size();
-            Json recordInfo = Json::object{
-                    {"types", std::move(elementTypes)}, {"arity", static_cast<long long>(recordArity)}};
-            records.emplace(getTypeQualifier(type), std::move(recordInfo));
+        for (const Type* field : as<RecordType>(type)->getFields()) {
+            elementTypes.push_back(getTypeQualifier(*field));
         }
-    }
 
-    RamRecordTypes = Json(records);
+        const size_t recordArity = elementTypes.size();
+        Json recordInfo = Json::object{
+                {"types", std::move(elementTypes)}, {"arity", static_cast<long long>(recordArity)}};
+        records.emplace(getTypeQualifier(type), std::move(recordInfo));
+    });
+
+    RamRecordTypes = Json(std::move(records));
     return RamRecordTypes;
 }
 
