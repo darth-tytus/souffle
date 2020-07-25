@@ -35,7 +35,7 @@ class AstNode;
 class AstProgram;
 class AstQualifiedName;
 class AstRelation;
-class AstType;
+class AstTypeDeclaration;
 class AstVariable;
 class AstRecordInit;
 class TypeAnalysis;
@@ -118,7 +118,7 @@ AstRelation* getRelation(const AstProgram& program, const AstQualifiedName& name
  * @param name the name of the type to search for
  * @return the type if it exists; nullptr otherwise
  */
-const AstType* getType(const AstProgram& program, const AstQualifiedName& name);
+const AstTypeDeclaration* getType(const AstProgram& program, const AstQualifiedName& name);
 
 /**
  * Returns the functor declaration with the given name in the program.

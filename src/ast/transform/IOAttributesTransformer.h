@@ -192,10 +192,10 @@ private:
 
         // Iterate over all record types in the program populating the records map.
         for (auto* astType : program->getTypes()) {
-            if (isA<AstRecordType>(astType)) {
+            if (isA<AstRecordTypeDeclaration>(astType)) {
                 elementParams.clear();
 
-                for (const auto field : as<AstRecordType>(astType)->getFields()) {
+                for (const auto field : as<AstRecordTypeDeclaration>(astType)->getFields()) {
                     elementParams.push_back(field->getName());
                 }
                 const size_t recordArity = elementParams.size();

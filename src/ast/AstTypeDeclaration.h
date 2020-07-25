@@ -8,7 +8,7 @@
 
 /************************************************************************
  *
- * @file AstType.h
+ * @file AstTypeDeclaration.h
  *
  * Defines a type, i.e., disjoint supersets of the universe
  *
@@ -24,6 +24,7 @@
 #include "utility/ContainerUtil.h"
 #include "utility/MiscUtil.h"
 #include "utility/StreamUtil.h"
+#include "utility/tinyformat.h"
 #include <algorithm>
 #include <cstddef>
 #include <iostream>
@@ -35,12 +36,12 @@
 namespace souffle {
 
 /**
- *  @class Type
+ *  @class TypeDeclaration
  *  @brief An abstract base class for types within the AST.
  */
-class AstType : public AstNode {
+class AstTypeDeclaration : public AstNode {
 public:
-    AstType(AstQualifiedName name = {}, SrcLocation loc = {})
+    AstTypeDeclaration(AstQualifiedName name = {}, SrcLocation loc = {})
             : AstNode(std::move(loc)), name(std::move(name)) {}
 
     /** get type name */
@@ -53,7 +54,7 @@ public:
         this->name = std::move(name);
     }
 
-    AstType* clone() const override = 0;
+    AstTypeDeclaration* clone() const override = 0;
 
 private:
     /** type name */
@@ -63,13 +64,13 @@ private:
 /**
  * A subset type. Can be derived from any type except union.
  */
-class AstSubsetType : public AstType {
+class AstSubsetTypeDeclaration : public AstTypeDeclaration {
 public:
-    AstSubsetType(AstQualifiedName name, AstQualifiedName baseTypeName, SrcLocation loc = {})
-            : AstType(std::move(name), std::move(loc)), baseType(std::move(baseTypeName)) {}
+    AstSubsetTypeDeclaration(AstQualifiedName name, AstQualifiedName baseTypeName, SrcLocation loc = {})
+            : AstTypeDeclaration(std::move(name), std::move(loc)), baseType(std::move(baseTypeName)) {}
 
-    AstSubsetType* clone() const override {
-        return new AstSubsetType(getQualifiedName(), getBaseType(), getSrcLoc());
+    AstSubsetTypeDeclaration* clone() const override {
+        return new AstSubsetTypeDeclaration(getQualifiedName(), getBaseType(), getSrcLoc());
     }
 
     const AstQualifiedName& getBaseType() const {
@@ -78,11 +79,11 @@ public:
 
 protected:
     void print(std::ostream& os) const override {
-        os << ".type " << getQualifiedName() << " <: " << getBaseType();
+        os << tfm::format(".type %s <: %s", getQualifiedName(), getBaseType());
     }
 
     bool equal(const AstNode& node) const override {
-        const auto& other = static_cast<const AstSubsetType&>(node);
+        const auto& other = static_cast<const AstSubsetTypeDeclaration&>(node);
         return getQualifiedName() == other.getQualifiedName() && baseType == other.baseType;
     }
 
@@ -95,10 +96,10 @@ private:
  * Each of the enumerated types become a sub-type of the new
  * union type.
  */
-class AstUnionType : public AstType {
+class AstUnionTypeDeclaration : public AstTypeDeclaration {
 public:
-    AstUnionType(AstQualifiedName name, std::vector<AstQualifiedName> types, SrcLocation loc = {})
-            : AstType(std::move(name), std::move(loc)), types(std::move(types)) {}
+    AstUnionTypeDeclaration(AstQualifiedName name, std::vector<AstQualifiedName> types, SrcLocation loc = {})
+            : AstTypeDeclaration(std::move(name), std::move(loc)), types(std::move(types)) {}
 
     /** Obtains a reference to the list element types */
     const std::vector<AstQualifiedName>& getTypes() const {
@@ -115,17 +116,17 @@ public:
         types.at(idx) = std::move(type);
     }
 
-    AstUnionType* clone() const override {
-        return new AstUnionType(getQualifiedName(), types, getSrcLoc());
+    AstUnionTypeDeclaration* clone() const override {
+        return new AstUnionTypeDeclaration(getQualifiedName(), types, getSrcLoc());
     }
 
 protected:
     void print(std::ostream& os) const override {
-        os << ".type " << getQualifiedName() << " = " << join(types, " | ");
+        os << tfm::format(".type %s = %s", getQualifiedName(), join(types, " | "));
     }
 
     bool equal(const AstNode& node) const override {
-        const auto& other = static_cast<const AstUnionType&>(node);
+        const auto& other = static_cast<const AstUnionTypeDeclaration&>(node);
         return getQualifiedName() == other.getQualifiedName() && types == other.types;
     }
 
@@ -140,10 +141,10 @@ private:
  * types are unrelated to all other types (they do not have
  * any super or sub types).
  */
-class AstRecordType : public AstType {
+class AstRecordTypeDeclaration : public AstTypeDeclaration {
 public:
-    AstRecordType(AstQualifiedName name, VecOwn<AstAttribute> fields, SrcLocation loc = {})
-            : AstType(std::move(name), std::move(loc)), fields(std::move(fields)) {}
+    AstRecordTypeDeclaration(AstQualifiedName name, VecOwn<AstAttribute> fields, SrcLocation loc = {})
+            : AstTypeDeclaration(std::move(name), std::move(loc)), fields(std::move(fields)) {}
 
     /** add field to record type */
     void add(std::string name, AstQualifiedName type) {
@@ -160,17 +161,17 @@ public:
         fields.at(idx)->setTypeName(std::move(type));
     }
 
-    AstRecordType* clone() const override {
-        return new AstRecordType(getQualifiedName(), souffle::clone(fields), getSrcLoc());
+    AstRecordTypeDeclaration* clone() const override {
+        return new AstRecordTypeDeclaration(getQualifiedName(), souffle::clone(fields), getSrcLoc());
     }
 
 protected:
     void print(std::ostream& os) const override {
-        os << ".type " << getQualifiedName() << "= [" << join(fields, ", ") << "]";
+        os << tfm::format(".type %s = [%s]", getQualifiedName(), join(fields, ", "));
     }
 
     bool equal(const AstNode& node) const override {
-        const auto& other = dynamic_cast<const AstRecordType&>(node);
+        const auto& other = dynamic_cast<const AstRecordTypeDeclaration&>(node);
         return getQualifiedName() == other.getQualifiedName() && equal_targets(fields, other.fields);
     }
 

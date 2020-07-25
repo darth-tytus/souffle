@@ -26,7 +26,7 @@
 #include "ast/AstQualifiedName.h"
 #include "ast/AstRelation.h"
 #include "ast/AstTranslationUnit.h"
-#include "ast/AstType.h"
+#include "ast/AstTypeDeclaration.h"
 #include "ast/AstVisitor.h"
 #include "ast/analysis/ComponentLookupAnalysis.h"
 #include "utility/StringUtil.h"
@@ -50,15 +50,15 @@ static const unsigned int MAX_INSTANTIATION_DEPTH = 1000;
  * A container type for the (instantiated) content of a component.
  */
 struct ComponentContent {
-    std::vector<std::unique_ptr<AstType>> types;
+    std::vector<std::unique_ptr<AstTypeDeclaration>> types;
     std::vector<std::unique_ptr<AstRelation>> relations;
     std::vector<std::unique_ptr<AstIO>> ios;
     std::vector<std::unique_ptr<AstClause>> clauses;
 
-    void add(std::unique_ptr<AstType>& type, ErrorReport& report) {
+    void add(std::unique_ptr<AstTypeDeclaration>& type, ErrorReport& report) {
         // add to result content (check existence first)
-        auto foundItem =
-                std::find_if(types.begin(), types.end(), [&](const std::unique_ptr<AstType>& element) {
+        auto foundItem = std::find_if(
+                types.begin(), types.end(), [&](const std::unique_ptr<AstTypeDeclaration>& element) {
                     return (element->getQualifiedName() == type->getQualifiedName());
                 });
         if (foundItem != types.end()) {
@@ -175,12 +175,12 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
     }
 
     // and continue with the local types
-    for (const auto& cur : component.getTypes()) {
+    for (const auto& cur : component.getTypesDeclarations()) {
         // create a clone
-        std::unique_ptr<AstType> type(cur->clone());
+        std::unique_ptr<AstTypeDeclaration> type(cur->clone());
 
         // instantiate elements of union types
-        visitDepthFirst(*type, [&](const AstUnionType& type) {
+        visitDepthFirst(*type, [&](const AstUnionTypeDeclaration& type) {
             for (const auto& name : type.getTypes()) {
                 AstQualifiedName newName = binding.find(name);
                 if (!newName.empty()) {
@@ -190,7 +190,7 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
         });
 
         // instantiate elements of record types
-        visitDepthFirst(*type, [&](const AstRecordType& type) {
+        visitDepthFirst(*type, [&](const AstRecordTypeDeclaration& type) {
             for (const auto& field : type.getFields()) {
                 auto&& newName = binding.find(field->getTypeName());
                 if (!newName.empty()) {
@@ -363,24 +363,24 @@ ComponentContent getInstantiatedContent(AstProgram& program, const AstComponentI
         });
 
         // rename field types in records
-        visitDepthFirst(node, [&](const AstRecordType& recordType) {
+        visitDepthFirst(node, [&](const AstRecordTypeDeclaration& recordType) {
             auto&& fields = recordType.getFields();
             for (size_t i = 0; i < fields.size(); i++) {
                 auto& field = fields[i];
                 auto pos = typeNameMapping.find(field->getTypeName());
                 if (pos != typeNameMapping.end()) {
-                    const_cast<AstRecordType&>(recordType).setFieldType(i, pos->second);
+                    const_cast<AstRecordTypeDeclaration&>(recordType).setFieldType(i, pos->second);
                 }
             }
         });
 
         // rename variant types in unions
-        visitDepthFirst(node, [&](const AstUnionType& unionType) {
+        visitDepthFirst(node, [&](const AstUnionTypeDeclaration& unionType) {
             auto& variants = unionType.getTypes();
             for (size_t i = 0; i < variants.size(); i++) {
                 auto pos = typeNameMapping.find(variants[i]);
                 if (pos != typeNameMapping.end()) {
-                    const_cast<AstUnionType&>(unionType).setVariantType(i, pos->second);
+                    const_cast<AstUnionTypeDeclaration&>(unionType).setVariantType(i, pos->second);
                 }
             }
         });

@@ -32,7 +32,7 @@
 #include "ast/AstProgram.h"
 #include "ast/AstRelation.h"
 #include "ast/AstTranslationUnit.h"
-#include "ast/AstType.h"
+#include "ast/AstTypeDeclaration.h"
 #include "ast/AstUtils.h"
 #include "ast/AstVisitor.h"
 #include "ast/TypeSystem.h"

@@ -22,7 +22,7 @@
 #include "ast/AstNode.h"
 #include "ast/AstQualifiedName.h"
 #include "ast/AstRelation.h"
-#include "ast/AstType.h"
+#include "ast/AstTypeDeclaration.h"
 #include "utility/ContainerUtil.h"
 #include "utility/MiscUtil.h"
 #include "utility/StreamUtil.h"
@@ -176,13 +176,13 @@ public:
         baseComponents.push_back(std::move(component));
     }
 
-    /** add type */
-    void addType(Own<AstType> t) {
+    /** add type declaration */
+    void addTypeDeclaration(Own<AstTypeDeclaration> t) {
         types.push_back(std::move(t));
     }
 
     /** get types */
-    std::vector<AstType*> getTypes() const {
+    std::vector<AstTypeDeclaration*> getTypesDeclarations() const {
         return toPtrVector(types);
     }
 
@@ -378,7 +378,7 @@ protected:
     VecOwn<AstComponentType> baseComponents;
 
     /** types declarations */
-    VecOwn<AstType> types;
+    VecOwn<AstTypeDeclaration> types;
 
     /** relations */
     VecOwn<AstRelation> relations;

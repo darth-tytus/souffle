@@ -26,7 +26,7 @@
 #include "ast/AstProgram.h"
 #include "ast/AstQualifiedName.h"
 #include "ast/AstRelation.h"
-#include "ast/AstType.h"
+#include "ast/AstTypeDeclaration.h"
 #include "ast/AstVisitor.h"
 #include "ast/analysis/AstTypeAnalysis.h"
 #include "utility/ContainerUtil.h"
@@ -84,8 +84,9 @@ AstRelation* getRelation(const AstProgram& program, const AstQualifiedName& name
     return getIf(program.getRelations(), [&](const AstRelation* r) { return r->getQualifiedName() == name; });
 }
 
-const AstType* getType(const AstProgram& program, const AstQualifiedName& name) {
-    return getIf(program.getTypes(), [&](const AstType* t) { return t->getQualifiedName() == name; });
+const AstTypeDeclaration* getType(const AstProgram& program, const AstQualifiedName& name) {
+    return getIf(
+            program.getTypes(), [&](const AstTypeDeclaration* t) { return t->getQualifiedName() == name; });
 }
 
 const AstFunctorDeclaration* getFunctorDeclaration(const AstProgram& program, const std::string& name) {

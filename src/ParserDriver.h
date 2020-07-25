@@ -37,8 +37,8 @@ class AstFunctorDeclaration;
 class AstPragma;
 class AstRelation;
 class AstIO;
-class AstSubsetType;
-class AstType;
+class AstSubsetTypeDeclaration;
+class AstTypeDeclaration;
 class DebugReport;
 class ErrorReport;
 
@@ -60,14 +60,15 @@ public:
     void addRelation(std::unique_ptr<AstRelation> r);
     void addFunctorDeclaration(std::unique_ptr<AstFunctorDeclaration> f);
     void addIO(std::unique_ptr<AstIO> d);
-    void addType(std::unique_ptr<AstType> type);
+    void addType(std::unique_ptr<AstTypeDeclaration> type);
     void addClause(std::unique_ptr<AstClause> c);
     void addComponent(std::unique_ptr<AstComponent> c);
     void addInstantiation(std::unique_ptr<AstComponentInit> ci);
     void addPragma(std::unique_ptr<AstPragma> p);
 
     void addIoFromDeprecatedTag(AstRelation& r);
-    Own<AstSubsetType> mkDeprecatedSubType(AstQualifiedName name, AstQualifiedName attr, SrcLocation loc);
+    Own<AstSubsetTypeDeclaration> mkDeprecatedSubType(
+            AstQualifiedName name, AstQualifiedName attr, SrcLocation loc);
 
     std::set<RelationTag> addReprTag(RelationTag tag, SrcLocation tagLoc, std::set<RelationTag> tags);
     std::set<RelationTag> addDeprecatedTag(RelationTag tag, SrcLocation tagLoc, std::set<RelationTag> tags);

@@ -135,7 +135,7 @@ souffle_sources = \
         ast/AstQualifiedName.h                             \
         ast/AstRelation.h                                  \
         ast/AstTranslationUnit.h                           \
-        ast/AstType.h                                      \
+        ast/AstTypeDeclaration.h                                      \
         ast/AstUtils.cpp                                   \
         ast/AstUtils.h                                     \
         ast/AstVisitor.h                                   \

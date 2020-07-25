@@ -23,7 +23,7 @@
 #include "ast/AstQualifiedName.h"
 #include "ast/AstRelation.h"
 #include "ast/AstTranslationUnit.h"
-#include "ast/AstType.h"
+#include "ast/AstTypeDeclaration.h"
 #include "ast/analysis/ComponentLookupAnalysis.h"
 #include "utility/StringUtil.h"
 #include <functional>

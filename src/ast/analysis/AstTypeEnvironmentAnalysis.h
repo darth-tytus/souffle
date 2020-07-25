@@ -31,7 +31,7 @@
 namespace souffle {
 
 class AstTranslationUnit;
-class AstType;
+class AstTypeDeclaration;
 
 class TypeEnvironmentAnalysis : public AstAnalysis {
 public:
@@ -65,7 +65,7 @@ private:
      * first create its base types and then the type itself.
      */
     const Type* createType(const AstQualifiedName& typeName,
-            const std::map<AstQualifiedName, const AstType*>& nameToAstType);
+            const std::map<AstQualifiedName, const AstTypeDeclaration*>& nameToAstType);
 };
 
 }  // end of namespace souffle

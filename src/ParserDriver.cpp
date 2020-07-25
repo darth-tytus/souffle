@@ -25,7 +25,7 @@
 #include "ast/AstQualifiedName.h"
 #include "ast/AstRelation.h"
 #include "ast/AstTranslationUnit.h"
-#include "ast/AstType.h"
+#include "ast/AstTypeDeclaration.h"
 #include "ast/AstUtils.h"
 #include "utility/ContainerUtil.h"
 #include "utility/FunctionalUtil.h"
@@ -138,15 +138,15 @@ void ParserDriver::addIO(std::unique_ptr<AstIO> d) {
     translationUnit->getProgram()->addIO(std::move(d));
 }
 
-void ParserDriver::addType(std::unique_ptr<AstType> type) {
+void ParserDriver::addType(std::unique_ptr<AstTypeDeclaration> type) {
     const auto& name = type->getQualifiedName();
-    if (const AstType* prev = getType(*translationUnit->getProgram(), name)) {
+    if (const AstTypeDeclaration* prev = getType(*translationUnit->getProgram(), name)) {
         Diagnostic err(Diagnostic::ERROR,
                 DiagnosticMessage("Redefinition of type " + toString(name), type->getSrcLoc()),
                 {DiagnosticMessage("Previous definition", prev->getSrcLoc())});
         translationUnit->getErrorReport().addDiagnostic(err);
     } else {
-        translationUnit->getProgram()->addType(std::move(type));
+        translationUnit->getProgram()->addTypeDeclaration(std::move(type));
     }
 }
 
@@ -202,12 +202,12 @@ std::set<RelationTag> ParserDriver::addTag(RelationTag tag, std::vector<Relation
     return tags;
 }
 
-Own<AstSubsetType> ParserDriver::mkDeprecatedSubType(
+Own<AstSubsetTypeDeclaration> ParserDriver::mkDeprecatedSubType(
         AstQualifiedName name, AstQualifiedName baseTypeName, SrcLocation loc) {
     if (!Global::config().has("legacy")) {
         warning(loc, "Deprecated type declaration used");
     }
-    return mk<AstSubsetType>(std::move(name), std::move(baseTypeName), std::move(loc));
+    return mk<AstSubsetTypeDeclaration>(std::move(name), std::move(baseTypeName), std::move(loc));
 }
 
 void ParserDriver::warning(const SrcLocation& loc, const std::string& msg) {

@@ -26,7 +26,7 @@
 #include "ast/AstPragma.h"
 #include "ast/AstProgram.h"
 #include "ast/AstRelation.h"
-#include "ast/AstType.h"
+#include "ast/AstTypeDeclaration.h"
 #include "utility/FunctionalUtil.h"
 #include "utility/MiscUtil.h"
 #include <cstddef>
@@ -78,9 +78,9 @@ struct AstVisitor : public ast_visitor_tag {
     if (const auto* n = dynamic_cast<const Ast##Kind*>(&node)) return visit##Kind(*n, args...);
 
         // types
-        FORWARD(SubsetType);
-        FORWARD(UnionType);
-        FORWARD(RecordType);
+        FORWARD(SubsetTypeDeclaration);
+        FORWARD(UnionTypeDeclaration);
+        FORWARD(RecordTypeDeclaration);
 
         // arguments
         FORWARD(Variable)
@@ -129,10 +129,10 @@ protected:
     }
 
     // -- types --
-    LINK(SubsetType, Type);
-    LINK(RecordType, Type);
-    LINK(UnionType, Type);
-    LINK(Type, Node);
+    LINK(SubsetTypeDeclaration, TypeDeclaration);
+    LINK(RecordTypeDeclaration, TypeDeclaration);
+    LINK(UnionTypeDeclaration, TypeDeclaration);
+    LINK(TypeDeclaration, Node);
 
     // -- arguments --
     LINK(Variable, Argument)

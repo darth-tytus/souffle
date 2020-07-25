@@ -25,7 +25,7 @@
 #include "ast/AstPragma.h"
 #include "ast/AstQualifiedName.h"
 #include "ast/AstRelation.h"
-#include "ast/AstType.h"
+#include "ast/AstTypeDeclaration.h"
 #include "ast/AstUtils.h"
 #include "utility/ContainerUtil.h"
 #include "utility/StreamUtil.h"
@@ -46,7 +46,7 @@ namespace souffle {
 class AstProgram : public AstNode {
 public:
     /** get types */
-    std::vector<AstType*> getTypes() const {
+    std::vector<AstTypeDeclaration*> getTypes() const {
         return toPtrVector(types);
     }
 
@@ -257,7 +257,7 @@ protected:
     friend class ParserDriver;
 
     /* add type */
-    void addType(Own<AstType> type) {
+    void addTypeDeclaration(Own<AstTypeDeclaration> type) {
         assert(getType(*this, type->getQualifiedName()) == nullptr && "Redefinition of type!");
         types.push_back(std::move(type));
     }
@@ -291,7 +291,7 @@ protected:
     }
 
     /** Program types  */
-    VecOwn<AstType> types;
+    VecOwn<AstTypeDeclaration> types;
 
     /** Program relations */
     VecOwn<AstRelation> relations;

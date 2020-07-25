@@ -19,7 +19,7 @@
 #include "ast/AstAttribute.h"
 #include "ast/AstProgram.h"
 #include "ast/AstTranslationUnit.h"
-#include "ast/AstType.h"
+#include "ast/AstTypeDeclaration.h"
 #include "ast/TypeSystem.h"
 #include "utility/MiscUtil.h"
 #include "utility/tinyformat.h"
@@ -33,14 +33,14 @@ namespace souffle {
 
 namespace {
 
-Graph<AstQualifiedName> createTypeDependencyGraph(const std::vector<AstType*>& programTypes) {
+Graph<AstQualifiedName> createTypeDependencyGraph(const std::vector<AstTypeDeclaration*>& programTypes) {
     Graph<AstQualifiedName> typeDependencyGraph;
     for (const auto* astType : programTypes) {
-        if (auto type = as<AstSubsetType>(astType)) {
+        if (auto type = as<AstSubsetTypeDeclaration>(astType)) {
             typeDependencyGraph.insert(type->getQualifiedName(), type->getBaseType());
-        } else if (isA<AstRecordType>(astType)) {
+        } else if (isA<AstRecordTypeDeclaration>(astType)) {
             // do nothing
-        } else if (auto type = as<AstUnionType>(astType)) {
+        } else if (auto type = as<AstUnionTypeDeclaration>(astType)) {
             for (const auto& subtype : type->getTypes()) {
                 typeDependencyGraph.insert(type->getQualifiedName(), subtype);
             }
@@ -54,8 +54,8 @@ Graph<AstQualifiedName> createTypeDependencyGraph(const std::vector<AstType*>& p
 /**
  * Find all the type with a cyclic definition (in terms of being a subtype)
  */
-std::set<AstQualifiedName> analyseCyclicTypes(
-        const Graph<AstQualifiedName>& dependencyGraph, const std::vector<AstType*>& programTypes) {
+std::set<AstQualifiedName> analyseCyclicTypes(const Graph<AstQualifiedName>& dependencyGraph,
+        const std::vector<AstTypeDeclaration*>& programTypes) {
     std::set<AstQualifiedName> cyclicTypes;
     for (const auto& astType : programTypes) {
         AstQualifiedName typeName = astType->getQualifiedName();
@@ -71,12 +71,12 @@ std::set<AstQualifiedName> analyseCyclicTypes(
  * Find all the primitive types that are the subtypes of the union types.
  */
 std::map<AstQualifiedName, std::set<AstQualifiedName>> analysePrimitiveTypesInUnion(
-        const Graph<AstQualifiedName>& dependencyGraph, const std::vector<AstType*>& programTypes,
+        const Graph<AstQualifiedName>& dependencyGraph, const std::vector<AstTypeDeclaration*>& programTypes,
         const TypeEnvironment& env) {
     std::map<AstQualifiedName, std::set<AstQualifiedName>> primitiveTypesInUnions;
 
     for (const auto& astType : programTypes) {
-        auto* unionType = as<AstUnionType>(astType);
+        auto* unionType = as<AstUnionTypeDeclaration>(astType);
         if (unionType == nullptr) {
             continue;
         }
@@ -112,10 +112,10 @@ void TypeEnvironmentAnalysis::run(const AstTranslationUnit& translationUnit) {
     cyclicTypes = analyseCyclicTypes(typeDependencyGraph, rawProgramTypes);
     primitiveTypesInUnions = analysePrimitiveTypesInUnion(typeDependencyGraph, rawProgramTypes, env);
 
-    std::map<AstQualifiedName, const AstType*> nameToAstType;
+    std::map<AstQualifiedName, const AstTypeDeclaration*> nameToAstType;
 
     // Filter redefined primitive types and cyclic types.
-    std::vector<AstType*> programTypes;
+    std::vector<AstTypeDeclaration*> programTypes;
     for (auto* type : program.getTypes()) {
         if (env.isType(type->getQualifiedName()) || isCyclic(type->getQualifiedName())) {
             continue;
@@ -129,8 +129,8 @@ void TypeEnvironmentAnalysis::run(const AstTranslationUnit& translationUnit) {
     }
 }
 
-const Type* TypeEnvironmentAnalysis::createType(
-        const AstQualifiedName& typeName, const std::map<AstQualifiedName, const AstType*>& nameToAstType) {
+const Type* TypeEnvironmentAnalysis::createType(const AstQualifiedName& typeName,
+        const std::map<AstQualifiedName, const AstTypeDeclaration*>& nameToAstType) {
     // base case
     if (env.isType(typeName)) {
         return &env.getType(typeName);
@@ -143,9 +143,9 @@ const Type* TypeEnvironmentAnalysis::createType(
     }
     const auto& astType = iterToType->second;
 
-    if (isA<AstSubsetType>(astType)) {
+    if (isA<AstSubsetTypeDeclaration>(astType)) {
         // First create a base type.
-        auto* baseType = createType(as<AstSubsetType>(astType)->getBaseType(), nameToAstType);
+        auto* baseType = createType(as<AstSubsetTypeDeclaration>(astType)->getBaseType(), nameToAstType);
 
         if (baseType == nullptr) {
             return nullptr;
@@ -158,10 +158,10 @@ const Type* TypeEnvironmentAnalysis::createType(
 
         return &env.createType<SubsetType>(typeName, *baseType);
 
-    } else if (isA<AstUnionType>(astType)) {
+    } else if (isA<AstUnionTypeDeclaration>(astType)) {
         // Create all elements and then the type itself
         std::vector<const Type*> elements;
-        for (const auto& element : as<AstUnionType>(astType)->getTypes()) {
+        for (const auto& element : as<AstUnionTypeDeclaration>(astType)->getTypes()) {
             auto* elementType = createType(element, nameToAstType);
             if (elementType == nullptr) {
                 return nullptr;
@@ -170,7 +170,7 @@ const Type* TypeEnvironmentAnalysis::createType(
         }
         return &env.createType<UnionType>(typeName, elements);
 
-    } else if (isA<AstRecordType>(astType)) {
+    } else if (isA<AstRecordTypeDeclaration>(astType)) {
         // Create anonymous base type first.
         // The types need to be initialized upfront,
         // because we may have mutually recursive record definitions.
@@ -178,7 +178,7 @@ const Type* TypeEnvironmentAnalysis::createType(
         auto& recordType = env.createType<SubsetRecordType>(typeName, recordBase);
 
         std::vector<const Type*> elements;
-        for (const auto* field : as<AstRecordType>(astType)->getFields()) {
+        for (const auto* field : as<AstRecordTypeDeclaration>(astType)->getFields()) {
             if (field->getTypeName() == typeName) {
                 elements.push_back(&recordBase);
                 continue;
