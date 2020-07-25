@@ -202,12 +202,12 @@ std::set<RelationTag> ParserDriver::addTag(RelationTag tag, std::vector<Relation
     return tags;
 }
 
-Own<AstSubsetTypeDeclaration> ParserDriver::mkDeprecatedSubType(
+Own<AstSubsetType> ParserDriver::mkDeprecatedSubType(
         AstQualifiedName name, AstQualifiedName baseTypeName, SrcLocation loc) {
     if (!Global::config().has("legacy")) {
         warning(loc, "Deprecated type declaration used");
     }
-    return mk<AstSubsetTypeDeclaration>(std::move(name), std::move(baseTypeName), std::move(loc));
+    return mk<AstSubsetType>(std::move(name), std::move(baseTypeName), std::move(loc));
 }
 
 void ParserDriver::warning(const SrcLocation& loc, const std::string& msg) {

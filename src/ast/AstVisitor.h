@@ -78,9 +78,9 @@ struct AstVisitor : public ast_visitor_tag {
     if (const auto* n = dynamic_cast<const Ast##Kind*>(&node)) return visit##Kind(*n, args...);
 
         // types
-        FORWARD(SubsetTypeDeclaration);
-        FORWARD(UnionTypeDeclaration);
-        FORWARD(RecordTypeDeclaration);
+        FORWARD(SubsetType);
+        FORWARD(UnionType);
+        FORWARD(RecordType);
 
         // arguments
         FORWARD(Variable)
@@ -129,9 +129,9 @@ protected:
     }
 
     // -- types --
-    LINK(SubsetTypeDeclaration, TypeDeclaration);
-    LINK(RecordTypeDeclaration, TypeDeclaration);
-    LINK(UnionTypeDeclaration, TypeDeclaration);
+    LINK(SubsetType, TypeDeclaration);
+    LINK(RecordType, TypeDeclaration);
+    LINK(UnionType, TypeDeclaration);
     LINK(TypeDeclaration, Node);
 
     // -- arguments --

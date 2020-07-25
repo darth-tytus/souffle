@@ -318,7 +318,7 @@
 %type <Mov<VecOwn<AstClause>>>              rule
 %type <Mov<VecOwn<AstClause>>>              rule_def
 %type <Mov<RuleBody>>                       term
-%type <Mov<Own<AstTypeDeclaration>>>                   type
+%type <Mov<Own<AstTypeDeclaration>>>        type
 %type <Mov<std::vector<AstQualifiedName>>>  type_params
 %type <Mov<std::vector<AstQualifiedName>>>  type_param_list
 %type <Mov<std::vector<AstQualifiedName>>>  union_type_list
@@ -382,10 +382,10 @@ identifier
 /* Type declarations */
 type
   : TYPE IDENT[name] SUBTYPE IDENT[base_type_name] {
-        $$ = mk<AstSubsetTypeDeclaration>($name, $base_type_name, @$);
+        $$ = mk<AstSubsetType>($name, $base_type_name, @$);
    }
-  | TYPE IDENT EQUALS    union_type_list  { $$ = mk<AstUnionTypeDeclaration >($2, $4, @$); }
-  | TYPE IDENT EQUALS   record_type_list  { $$ = mk<AstRecordTypeDeclaration>($2, $4, @$); }
+  | TYPE IDENT EQUALS    union_type_list  { $$ = mk<AstUnionType >($2, $4, @$); }
+  | TYPE IDENT EQUALS   record_type_list  { $$ = mk<AstRecordType>($2, $4, @$); }
     /* deprecated subset type forms */
   | NUMBER_TYPE IDENT { $$ = driver.mkDeprecatedSubType($IDENT, "number", @$); }
   | SYMBOL_TYPE IDENT { $$ = driver.mkDeprecatedSubType($IDENT, "symbol", @$); }

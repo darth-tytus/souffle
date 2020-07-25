@@ -36,11 +36,11 @@ namespace {
 Graph<AstQualifiedName> createTypeDependencyGraph(const std::vector<AstTypeDeclaration*>& programTypes) {
     Graph<AstQualifiedName> typeDependencyGraph;
     for (const auto* astType : programTypes) {
-        if (auto type = as<AstSubsetTypeDeclaration>(astType)) {
+        if (auto type = as<AstSubsetType>(astType)) {
             typeDependencyGraph.insert(type->getQualifiedName(), type->getBaseType());
-        } else if (isA<AstRecordTypeDeclaration>(astType)) {
+        } else if (isA<AstRecordType>(astType)) {
             // do nothing
-        } else if (auto type = as<AstUnionTypeDeclaration>(astType)) {
+        } else if (auto type = as<AstUnionType>(astType)) {
             for (const auto& subtype : type->getTypes()) {
                 typeDependencyGraph.insert(type->getQualifiedName(), subtype);
             }
@@ -76,7 +76,7 @@ std::map<AstQualifiedName, std::set<AstQualifiedName>> analysePrimitiveTypesInUn
     std::map<AstQualifiedName, std::set<AstQualifiedName>> primitiveTypesInUnions;
 
     for (const auto& astType : programTypes) {
-        auto* unionType = as<AstUnionTypeDeclaration>(astType);
+        auto* unionType = as<AstUnionType>(astType);
         if (unionType == nullptr) {
             continue;
         }
@@ -143,9 +143,9 @@ const Type* TypeEnvironmentAnalysis::createType(const AstQualifiedName& typeName
     }
     const auto& astType = iterToType->second;
 
-    if (isA<AstSubsetTypeDeclaration>(astType)) {
+    if (isA<AstSubsetType>(astType)) {
         // First create a base type.
-        auto* baseType = createType(as<AstSubsetTypeDeclaration>(astType)->getBaseType(), nameToAstType);
+        auto* baseType = createType(as<AstSubsetType>(astType)->getBaseType(), nameToAstType);
 
         if (baseType == nullptr) {
             return nullptr;
@@ -158,10 +158,10 @@ const Type* TypeEnvironmentAnalysis::createType(const AstQualifiedName& typeName
 
         return &env.createType<SubsetType>(typeName, *baseType);
 
-    } else if (isA<AstUnionTypeDeclaration>(astType)) {
+    } else if (isA<AstUnionType>(astType)) {
         // Create all elements and then the type itself
         std::vector<const Type*> elements;
-        for (const auto& element : as<AstUnionTypeDeclaration>(astType)->getTypes()) {
+        for (const auto& element : as<AstUnionType>(astType)->getTypes()) {
             auto* elementType = createType(element, nameToAstType);
             if (elementType == nullptr) {
                 return nullptr;
@@ -170,7 +170,7 @@ const Type* TypeEnvironmentAnalysis::createType(const AstQualifiedName& typeName
         }
         return &env.createType<UnionType>(typeName, elements);
 
-    } else if (isA<AstRecordTypeDeclaration>(astType)) {
+    } else if (isA<AstRecordType>(astType)) {
         // Create anonymous base type first.
         // The types need to be initialized upfront,
         // because we may have mutually recursive record definitions.
@@ -178,7 +178,7 @@ const Type* TypeEnvironmentAnalysis::createType(const AstQualifiedName& typeName
         auto& recordType = env.createType<SubsetRecordType>(typeName, recordBase);
 
         std::vector<const Type*> elements;
-        for (const auto* field : as<AstRecordTypeDeclaration>(astType)->getFields()) {
+        for (const auto* field : as<AstRecordType>(astType)->getFields()) {
             if (field->getTypeName() == typeName) {
                 elements.push_back(&recordBase);
                 continue;

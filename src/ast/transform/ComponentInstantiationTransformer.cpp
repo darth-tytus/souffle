@@ -180,7 +180,7 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
         std::unique_ptr<AstTypeDeclaration> type(cur->clone());
 
         // instantiate elements of union types
-        visitDepthFirst(*type, [&](const AstUnionTypeDeclaration& type) {
+        visitDepthFirst(*type, [&](const AstUnionType& type) {
             for (const auto& name : type.getTypes()) {
                 AstQualifiedName newName = binding.find(name);
                 if (!newName.empty()) {
@@ -190,7 +190,7 @@ void collectContent(AstProgram& program, const AstComponent& component, const Ty
         });
 
         // instantiate elements of record types
-        visitDepthFirst(*type, [&](const AstRecordTypeDeclaration& type) {
+        visitDepthFirst(*type, [&](const AstRecordType& type) {
             for (const auto& field : type.getFields()) {
                 auto&& newName = binding.find(field->getTypeName());
                 if (!newName.empty()) {
@@ -363,24 +363,24 @@ ComponentContent getInstantiatedContent(AstProgram& program, const AstComponentI
         });
 
         // rename field types in records
-        visitDepthFirst(node, [&](const AstRecordTypeDeclaration& recordType) {
+        visitDepthFirst(node, [&](const AstRecordType& recordType) {
             auto&& fields = recordType.getFields();
             for (size_t i = 0; i < fields.size(); i++) {
                 auto& field = fields[i];
                 auto pos = typeNameMapping.find(field->getTypeName());
                 if (pos != typeNameMapping.end()) {
-                    const_cast<AstRecordTypeDeclaration&>(recordType).setFieldType(i, pos->second);
+                    const_cast<AstRecordType&>(recordType).setFieldType(i, pos->second);
                 }
             }
         });
 
         // rename variant types in unions
-        visitDepthFirst(node, [&](const AstUnionTypeDeclaration& unionType) {
+        visitDepthFirst(node, [&](const AstUnionType& unionType) {
             auto& variants = unionType.getTypes();
             for (size_t i = 0; i < variants.size(); i++) {
                 auto pos = typeNameMapping.find(variants[i]);
                 if (pos != typeNameMapping.end()) {
-                    const_cast<AstUnionTypeDeclaration&>(unionType).setVariantType(i, pos->second);
+                    const_cast<AstUnionType&>(unionType).setVariantType(i, pos->second);
                 }
             }
         });

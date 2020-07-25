@@ -36,7 +36,7 @@
 namespace souffle {
 
 /**
- *  @class TypeDeclaration
+ *  @class AstTypeDeclaration
  *  @brief An abstract base class for types within the AST.
  */
 class AstTypeDeclaration : public AstNode {
@@ -64,13 +64,13 @@ private:
 /**
  * A subset type. Can be derived from any type except union.
  */
-class AstSubsetTypeDeclaration : public AstTypeDeclaration {
+class AstSubsetType : public AstTypeDeclaration {
 public:
-    AstSubsetTypeDeclaration(AstQualifiedName name, AstQualifiedName baseTypeName, SrcLocation loc = {})
+    AstSubsetType(AstQualifiedName name, AstQualifiedName baseTypeName, SrcLocation loc = {})
             : AstTypeDeclaration(std::move(name), std::move(loc)), baseType(std::move(baseTypeName)) {}
 
-    AstSubsetTypeDeclaration* clone() const override {
-        return new AstSubsetTypeDeclaration(getQualifiedName(), getBaseType(), getSrcLoc());
+    AstSubsetType* clone() const override {
+        return new AstSubsetType(getQualifiedName(), getBaseType(), getSrcLoc());
     }
 
     const AstQualifiedName& getBaseType() const {
@@ -83,7 +83,7 @@ protected:
     }
 
     bool equal(const AstNode& node) const override {
-        const auto& other = static_cast<const AstSubsetTypeDeclaration&>(node);
+        const auto& other = static_cast<const AstSubsetType&>(node);
         return getQualifiedName() == other.getQualifiedName() && baseType == other.baseType;
     }
 
@@ -96,9 +96,9 @@ private:
  * Each of the enumerated types become a sub-type of the new
  * union type.
  */
-class AstUnionTypeDeclaration : public AstTypeDeclaration {
+class AstUnionType : public AstTypeDeclaration {
 public:
-    AstUnionTypeDeclaration(AstQualifiedName name, std::vector<AstQualifiedName> types, SrcLocation loc = {})
+    AstUnionType(AstQualifiedName name, std::vector<AstQualifiedName> types, SrcLocation loc = {})
             : AstTypeDeclaration(std::move(name), std::move(loc)), types(std::move(types)) {}
 
     /** Obtains a reference to the list element types */
@@ -116,8 +116,8 @@ public:
         types.at(idx) = std::move(type);
     }
 
-    AstUnionTypeDeclaration* clone() const override {
-        return new AstUnionTypeDeclaration(getQualifiedName(), types, getSrcLoc());
+    AstUnionType* clone() const override {
+        return new AstUnionType(getQualifiedName(), types, getSrcLoc());
     }
 
 protected:
@@ -126,7 +126,7 @@ protected:
     }
 
     bool equal(const AstNode& node) const override {
-        const auto& other = static_cast<const AstUnionTypeDeclaration&>(node);
+        const auto& other = static_cast<const AstUnionType&>(node);
         return getQualifiedName() == other.getQualifiedName() && types == other.types;
     }
 
@@ -141,9 +141,9 @@ private:
  * types are unrelated to all other types (they do not have
  * any super or sub types).
  */
-class AstRecordTypeDeclaration : public AstTypeDeclaration {
+class AstRecordType : public AstTypeDeclaration {
 public:
-    AstRecordTypeDeclaration(AstQualifiedName name, VecOwn<AstAttribute> fields, SrcLocation loc = {})
+    AstRecordType(AstQualifiedName name, VecOwn<AstAttribute> fields, SrcLocation loc = {})
             : AstTypeDeclaration(std::move(name), std::move(loc)), fields(std::move(fields)) {}
 
     /** add field to record type */
@@ -161,8 +161,8 @@ public:
         fields.at(idx)->setTypeName(std::move(type));
     }
 
-    AstRecordTypeDeclaration* clone() const override {
-        return new AstRecordTypeDeclaration(getQualifiedName(), souffle::clone(fields), getSrcLoc());
+    AstRecordType* clone() const override {
+        return new AstRecordType(getQualifiedName(), souffle::clone(fields), getSrcLoc());
     }
 
 protected:
@@ -171,7 +171,7 @@ protected:
     }
 
     bool equal(const AstNode& node) const override {
-        const auto& other = dynamic_cast<const AstRecordTypeDeclaration&>(node);
+        const auto& other = dynamic_cast<const AstRecordType&>(node);
         return getQualifiedName() == other.getQualifiedName() && equal_targets(fields, other.fields);
     }
 

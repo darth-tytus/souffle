@@ -92,9 +92,9 @@ private:
     void checkRelation(const AstRelation& relation);
 
     void checkTypeDeclaration(const AstTypeDeclaration& type);
-    void checkRecordType(const AstRecordTypeDeclaration& type);
-    void checkSubsetType(const AstSubsetTypeDeclaration& type);
-    void checkUnionType(const AstUnionTypeDeclaration& type);
+    void checkRecordType(const AstRecordType& type);
+    void checkSubsetType(const AstSubsetType& type);
+    void checkUnionType(const AstUnionType& type);
 
     void checkNamespaces();
     void checkIO();
@@ -605,7 +605,7 @@ void AstSemanticCheckerImpl::checkRelation(const AstRelation& relation) {
 
 // ----- types --------
 
-void AstSemanticCheckerImpl::checkUnionType(const AstUnionTypeDeclaration& type) {
+void AstSemanticCheckerImpl::checkUnionType(const AstUnionType& type) {
     // check presence of all the element types and that all element types are based off a primitive
     for (const AstQualifiedName& sub : type.getTypes()) {
         if (typeEnv.isPrimitiveType(sub)) {
@@ -616,7 +616,7 @@ void AstSemanticCheckerImpl::checkUnionType(const AstUnionTypeDeclaration& type)
             report.addError(tfm::format("Undefined type %s in definition of union type %s", sub,
                                     type.getQualifiedName()),
                     type.getSrcLoc());
-        } else if (!isA<AstUnionTypeDeclaration>(subt) && !isA<AstSubsetTypeDeclaration>(subt)) {
+        } else if (!isA<AstUnionType>(subt) && !isA<AstSubsetType>(subt)) {
             report.addError(tfm::format("Union type %s contains the non-primitive type %s",
                                     type.getQualifiedName(), sub),
                     type.getSrcLoc());
@@ -632,7 +632,7 @@ void AstSemanticCheckerImpl::checkUnionType(const AstUnionTypeDeclaration& type)
     /* check that union types do not mix different primitive types */
     for (const auto* type : program.getTypes()) {
         // We are only interested in unions here.
-        if (dynamic_cast<const AstUnionTypeDeclaration*>(type) == nullptr) {
+        if (dynamic_cast<const AstUnionType*>(type) == nullptr) {
             continue;
         }
 
@@ -650,7 +650,7 @@ void AstSemanticCheckerImpl::checkUnionType(const AstUnionTypeDeclaration& type)
     }
 }
 
-void AstSemanticCheckerImpl::checkRecordType(const AstRecordTypeDeclaration& type) {
+void AstSemanticCheckerImpl::checkRecordType(const AstRecordType& type) {
     auto&& fields = type.getFields();
     // check proper definition of all field types
     for (auto&& field : fields) {
@@ -674,7 +674,7 @@ void AstSemanticCheckerImpl::checkRecordType(const AstRecordTypeDeclaration& typ
     }
 }
 
-void AstSemanticCheckerImpl::checkSubsetType(const AstSubsetTypeDeclaration& astType) {
+void AstSemanticCheckerImpl::checkSubsetType(const AstSubsetType& astType) {
     if (typeEnvAnalysis.isCyclic(astType.getQualifiedName())) {
         report.addError(
                 tfm::format("Infinite descent in the definition of type %s", astType.getQualifiedName()),
@@ -704,12 +704,12 @@ void AstSemanticCheckerImpl::checkTypeDeclaration(const AstTypeDeclaration& type
         return;
     }
 
-    if (isA<AstUnionTypeDeclaration>(type)) {
-        checkUnionType(*as<AstUnionTypeDeclaration>(type));
-    } else if (isA<AstRecordTypeDeclaration>(type)) {
-        checkRecordType(*as<AstRecordTypeDeclaration>(type));
-    } else if (isA<AstSubsetTypeDeclaration>(type)) {
-        checkSubsetType(*as<AstSubsetTypeDeclaration>(type));
+    if (isA<AstUnionType>(type)) {
+        checkUnionType(*as<AstUnionType>(type));
+    } else if (isA<AstRecordType>(type)) {
+        checkRecordType(*as<AstRecordType>(type));
+    } else if (isA<AstSubsetType>(type)) {
+        checkSubsetType(*as<AstSubsetType>(type));
     } else {
         fatal("unsupported type construct: %s", typeid(type).name());
     }
